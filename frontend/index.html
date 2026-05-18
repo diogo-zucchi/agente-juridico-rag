@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Agente Jurídico RAG</title>
+  <style>
+    :root {
+      --azul:    #1a3a5c;
+      --azul2:   #2563eb;
+      --cinza:   #f1f5f9;
+      --borda:   #cbd5e1;
+      --texto:   #1e293b;
+      --verde:   #16a34a;
+      --laranja: #ea580c;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: var(--cinza);
+      color: var(--texto);
+      min-height: 100vh;
+    }
+
+    header {
+      background: var(--azul);
+      color: white;
+      padding: 1.2rem 2rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,.3);
+    }
+    header h1 { font-size: 1.3rem; font-weight: 700; }
+    header span { font-size: .85rem; opacity: .75; }
+
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 2rem 1rem;
+      display: grid;
+      grid-template-columns: 1fr 300px;
+      gap: 1.5rem;
+    }
+    @media (max-width: 760px) {
+      .container { grid-template-columns: 1fr; }
+    }
+
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 1.5rem;
+      box-shadow: 0 1px 4px rgba(0,0,0,.08);
+    }
+    .card h2 { font-size: 1rem; color: var(--azul); margin-bottom: 1rem; }
+
+    #pergunta {
+      width: 100%;
+      height: 100px;
+      border: 1.5px solid var(--borda);
+      border-radius: 8px;
+      padding: .75rem;
+      font-size: .95rem;
+      resize: vertical;
+      transition: border-color .2s;
+    }
+    #pergunta:focus { outline: none; border-color: var(--azul2); }
+
+    .btn-row { display: flex; gap: .75rem; margin-top: .75rem; }
+
+    button {
+      padding: .6rem 1.4rem;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: .9rem;
+      font-weight: 600;
+      transition: opacity .2s;
+    }
+    button:hover { opacity: .88; }
+    button:disabled { opacity: .5; cursor: not-allowed; }
+
+    .btn-primary { background: var(--azul2); color: white; }
+    .btn-outline  { background: white; color: var(--azul); border: 1.5px solid var(--azul); }
+
+    #resposta-box { margin-top: 1.25rem; display: none; }
+    #resposta-texto {
+      background: #f8fafc;
+      border: 1px solid var(--borda);
+      border-radius: 8px;
+      padding: 1rem;
+      white-space: pre-wrap;
+      line-height: 1.65;
+      font-size: .93rem;
+    }
+
+    #fontes-lista { margin-top: 1rem; }
+    .fonte-item {
+      background: #eff6ff;
+      border-left: 4px solid var(--azul2);
+      border-radius: 0 6px 6px 0;
+      padding: .6rem .9rem;
+      margin-bottom: .5rem;
+      font-size: .85rem;
+    }
+    .fonte-item strong { display: block; color: var(--azul); }
+    .score { color: var(--verde); font-weight: 600; font-size: .78rem; }
+
+    /* ── Upload ── */
+    .upload-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .upload-card h2 { width: 100%; }
+
+    .upload-area {
+      width: 100%;
+      border-radius: 8px;
+      padding: 1.5rem;
+      text-align: center;
+      cursor: pointer;
+      background: var(--cinza);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: .4rem;
+    }
+    .upload-area input { display: none; }
+    .upload-area p { font-size: .85rem; color: #64748b; }
+
+    #titulo-doc {
+      width: 100%;
+      margin-top: .75rem;
+      padding: .55rem .7rem;
+      border: 1.5px solid var(--borda);
+      border-radius: 8px;
+      font-size: .9rem;
+    }
+
+    #upload-status {
+      width: 100%;
+      margin-top: .75rem;
+      font-size: .85rem;
+      min-height: 1.2em;
+      text-align: center;
+    }
+    .ok  { color: var(--verde); }
+    .err { color: var(--laranja); }
+
+    #historico-lista { max-height: 300px; overflow-y: auto; }
+    .hist-item {
+      padding: .55rem 0;
+      border-bottom: 1px solid var(--cinza);
+      font-size: .83rem;
+      cursor: pointer;
+    }
+    .hist-item:hover { color: var(--azul2); }
+    .hist-data { font-size: .75rem; color: #94a3b8; }
+
+    .spinner {
+      display: inline-block;
+      width: 18px; height: 18px;
+      border: 2.5px solid rgba(255,255,255,.4);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      vertical-align: middle;
+      margin-right: .4rem;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Agente Jurídico Inteligente</h1>
+    <span>RAG — Retrieval-Augmented Generation</span>
+  </div>
+</header>
+
+<div class="container">
+
+  <div>
+    <div class="card">
+      <h2>Consulta Jurídica</h2>
+      <textarea id="pergunta">
+      </textarea>
+      <div class="btn-row">
+        <button class="btn-primary" id="btn-consultar" onclick="consultar()">Consultar</button>
+        <button class="btn-outline" onclick="limpar()">Limpar</button>
+      </div>
+
+      <div id="resposta-box">
+        <h2 style="margin-top:1.25rem">Resposta</h2>
+        <div id="resposta-texto"></div>
+        <div id="fontes-lista">
+          <h2 style="margin-top:1rem">Fontes Utilizadas</h2>
+          <div id="fontes-conteudo"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:1.25rem">
+      <h2>Histórico de Consultas</h2>
+      <div id="historico-lista">
+        <p style="color:#94a3b8;font-size:.85rem">Carregando histórico...</p>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <div class="card upload-card">
+      <h2>Indexar Documento</h2>
+      <label class="upload-area" id="upload-area">
+        <input type="file" id="arquivo-input" accept=".pdf,.txt,.html,.htm"
+               onchange="atualizarNomeArquivo()" />
+        <div style="font-size:2rem">📄</div>
+        <p id="upload-label">Clique ou arraste um arquivo<br><em>PDF, TXT ou HTML</em></p>
+      </label>
+
+      <input type="text" id="titulo-doc" placeholder="Selecione um arquivo..." readonly 
+      style="background:#f1f5f9;cursor:default;color:#64748b;" />
+
+      <button class="btn-primary" style="width:100%;margin-top:.75rem"
+              onclick="fazerUpload()">Indexar</button>
+
+      <div id="upload-status"></div>
+    </div>
+
+    <div class="card" style="margin-top:1rem">
+      <h2>Status da API</h2>
+      <div id="api-status" style="font-size:.85rem;color:#94a3b8">Verificando...</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  const API_BASE = "http://localhost:8000/api/v1";
+
+  window.addEventListener("load", () => {
+    verificarAPI();
+    carregarHistorico();
+  });
+
+  async function verificarAPI() {
+    const el = document.getElementById("api-status");
+    try {
+      const r = await fetch("http://localhost:8000/health");
+      const d = await r.json();
+      el.innerHTML = d.status === "ok"
+        ? '<span style="color:var(--verde)">✅ Online — Banco conectado</span>'
+        : '<span style="color:var(--laranja)">⚠️ Banco desconectado</span>';
+    } catch {
+      el.innerHTML = '<span style="color:var(--laranja)">❌ API offline</span>';
+    }
+  }
+
+  async function consultar() {
+    const pergunta = document.getElementById("pergunta").value.trim();
+    if (!pergunta) { alert("Digite uma pergunta."); return; }
+
+    const btn = document.getElementById("btn-consultar");
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>Consultando...';
+
+    const box = document.getElementById("resposta-box");
+    box.style.display = "none";
+
+    try {
+      const r = await fetch(`${API_BASE}/consultar`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pergunta }),
+      });
+      const d = await r.json();
+
+      document.getElementById("resposta-texto").textContent = d.resposta;
+
+      const fc = document.getElementById("fontes-conteudo");
+      fc.innerHTML = "";
+      if (d.fontes && d.fontes.length > 0) {
+        d.fontes.forEach((f, i) => {
+          fc.innerHTML += `
+            <div class="fonte-item">
+              <strong>[${i+1}] ${f.titulo}</strong>
+              ${f.fonte} &nbsp;
+              <span class="score">score: ${f.score.toFixed(3)}</span>
+              <div style="margin-top:.3rem;color:#475569">
+                ${f.texto_chunk.substring(0, 120)}…
+              </div>
+            </div>`;
+        });
+      } else {
+        fc.innerHTML = '<p style="color:#94a3b8;font-size:.85rem">Nenhuma fonte utilizada.</p>';
+      }
+
+      box.style.display = "block";
+      carregarHistorico();
+    } catch (e) {
+      alert("Erro ao consultar a API. Verifique se o backend está rodando.");
+      console.error(e);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Consultar";
+    }
+  }
+
+  function limpar() {
+    document.getElementById("pergunta").value = "";
+    document.getElementById("resposta-box").style.display = "none";
+  }
+
+  function atualizarNomeArquivo() {
+    const input = document.getElementById("arquivo-input");
+    const label = document.getElementById("upload-label");
+    if (input.files.length > 0) {
+      const nome = input.files[0].name.replace(/\.[^.]+$/, "").replace(/[-_]/g, " ");
+      label.textContent = input.files[0].name;
+      document.getElementById("titulo-doc").value = nome;
+    }
+  }
+
+  async function fazerUpload() {
+    const input  = document.getElementById("arquivo-input");
+    const titulo = document.getElementById("titulo-doc").value.trim();
+    const status = document.getElementById("upload-status");
+
+    if (!input.files.length) { status.innerHTML = '<span class="err">Selecione um arquivo.</span>'; return; }
+    if (!titulo)              { status.innerHTML = '<span class="err">Informe o título.</span>'; return; }
+
+    status.textContent = "Indexando…";
+
+    const fd = new FormData();
+    fd.append("arquivo", input.files[0]);
+    fd.append("titulo", titulo);
+
+    try {
+      const r = await fetch(`${API_BASE}/ingerir`, { method: "POST", body: fd });
+      const d = await r.json();
+      if (r.ok) {
+        status.innerHTML = `<span class="ok">✅ ${d.mensagem} (ID: ${d.documento_id})</span>`;
+        input.value = "";
+        document.getElementById("upload-label").innerHTML =
+          "Clique ou arraste um arquivo<br><em>PDF, TXT ou HTML</em>";
+        document.getElementById("titulo-doc").value = "";
+      } else {
+        status.innerHTML = `<span class="err">❌ ${d.detail}</span>`;
+      }
+    } catch (e) {
+      status.innerHTML = '<span class="err">❌ Erro de conexão com a API.</span>';
+    }
+  }
+
+  async function carregarHistorico() {
+    const lista = document.getElementById("historico-lista");
+    try {
+      const r = await fetch(`${API_BASE}/historico?limite=15`);
+      const d = await r.json();
+      if (!d.length) {
+        lista.innerHTML = '<p style="color:#94a3b8;font-size:.85rem">Nenhuma consulta ainda.</p>';
+        return;
+      }
+      lista.innerHTML = d.map(c => `
+        <div class="hist-item" onclick="preencherPergunta('${c.pergunta.replace(/'/g,"\\'")}')">
+          <div>${c.pergunta.substring(0, 70)}${c.pergunta.length > 70 ? "…" : ""}</div>
+          <div class="hist-data">${new Date(c.data_hora).toLocaleString("pt-BR")}</div>
+        </div>
+      `).join("");
+    } catch {
+      lista.innerHTML = '<p style="color:#94a3b8;font-size:.85rem">Histórico indisponível.</p>';
+    }
+  }
+
+  function preencherPergunta(texto) {
+    document.getElementById("pergunta").value = texto;
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+</script>
+</body>
+</html>
