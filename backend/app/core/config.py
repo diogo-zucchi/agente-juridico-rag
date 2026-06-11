@@ -6,7 +6,17 @@ ENV_FILE = Path(__file__).resolve().parent.parent.parent.parent / ".env"
 class Settings(BaseSettings):
     database_url: str = "postgresql+psycopg://postgres:senha@localhost:5432/agente_juridico"
 
+    # ── LLMs ──────────────────────────────────────────────
     maritaca_api_key: str = ""
+    maritaca_model: str = "sabia-4"
+
+    deepseek_api_key: str = ""
+    deepseek_model: str = "deepseek-chat"
+    deepseek_base_url: str = "https://api.deepseek.com"
+
+    openai_api_key: str = ""
+    openai_model: str = "gpt-4o-mini"
+    openai_base_url: str = "https://api.openai.com/v1"
 
     embedding_model: str = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
 

@@ -26,6 +26,7 @@ CREATE TABLE IF NOT EXISTS documentos (
     titulo          VARCHAR(500) NOT NULL,
     texto           TEXT NOT NULL,
     data_publicacao DATE,
+    nivel_dificuldade VARCHAR(20),   -- 'facil', 'medio' ou 'dificil' (experimento)
     id_fonte        INTEGER REFERENCES fontes(id) ON DELETE SET NULL,
     hash_integridade VARCHAR(64) UNIQUE,  -- SHA-256 para evitar duplicatas
     arquivo_origem  VARCHAR(500),
@@ -58,7 +59,8 @@ CREATE TABLE IF NOT EXISTS consultas (
     id         SERIAL PRIMARY KEY,
     pergunta   TEXT NOT NULL,
     data_hora  TIMESTAMP DEFAULT NOW(),
-    id_resposta INTEGER  -- será preenchido após gerar resposta
+    id_resposta INTEGER,  -- será preenchido após gerar resposta
+    id_documento INTEGER REFERENCES documentos(id) ON DELETE SET NULL
 );
 
 -- --------------------------------------------------------
@@ -68,6 +70,7 @@ CREATE TABLE IF NOT EXISTS consultas (
 CREATE TABLE IF NOT EXISTS respostas (
     id             SERIAL PRIMARY KEY,
     texto_resposta TEXT NOT NULL,
+    modelo_llm     VARCHAR(50),   -- 'maritaca' ou 'deepseek'
     data_hora      TIMESTAMP DEFAULT NOW(),
     id_consulta    INTEGER REFERENCES consultas(id) ON DELETE CASCADE
 );
@@ -87,6 +90,19 @@ CREATE TABLE IF NOT EXISTS resposta_documento (
     id_chunk    INTEGER REFERENCES chunks(id) ON DELETE SET NULL,
     score       FLOAT,   -- score de similaridade
     criado_em   TIMESTAMP DEFAULT NOW()
+);
+
+-- --------------------------------------------------------
+-- Tabela: AVALIACOES
+-- Nota (1 a 5) atribuída pelo avaliador a cada resposta
+-- --------------------------------------------------------
+CREATE TABLE IF NOT EXISTS avaliacoes (
+    id          SERIAL PRIMARY KEY,
+    id_resposta INTEGER REFERENCES respostas(id) ON DELETE CASCADE,
+    nota        INTEGER NOT NULL CHECK (nota BETWEEN 1 AND 5),
+    comentario  TEXT,
+    avaliador   VARCHAR(255),
+    data_hora   TIMESTAMP DEFAULT NOW()
 );
 
 -- --------------------------------------------------------

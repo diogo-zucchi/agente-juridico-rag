@@ -84,9 +84,26 @@ def _salvar_faiss():
 # ─────────────────────────────────────────────
 
 def _ler_pdf(caminho: str) -> str:
-    from pypdf import PdfReader
-    reader = PdfReader(caminho)
-    return "\n".join(p.extract_text() or "" for p in reader.pages)
+    texto = ""
+
+    try:
+        import fitz  # PyMuPDF
+        with fitz.open(caminho) as doc:
+            texto = "\n".join(page.get_text() for page in doc)
+    except Exception as e:
+        logger.warning(f"PyMuPDF não disponível/falhou ({e}); tentando pypdf...")
+
+    if not texto.strip():
+        from pypdf import PdfReader
+        reader = PdfReader(caminho)
+        texto = "\n".join(p.extract_text() or "" for p in reader.pages)
+
+    if not texto.strip():
+        raise ValueError(
+            "Não foi possível extrair texto deste PDF. Ele pode ser digitalizado "
+            "(imagem), o que exigiria OCR. Envie o documento em .txt ou .html."
+        )
+    return texto
 
 
 def _ler_txt(caminho: str) -> str:
@@ -156,6 +173,7 @@ def ingerir_documento(
     caminho: str,
     titulo: str,
     id_fonte: int | None = None,
+    nivel_dificuldade: str | None = None,
 ) -> Documento:
     """
     Pipeline completo:
@@ -177,6 +195,7 @@ def ingerir_documento(
         titulo=titulo,
         texto=texto,
         id_fonte=id_fonte,
+        nivel_dificuldade=nivel_dificuldade,
         hash_integridade=hash_doc,
         arquivo_origem=os.path.basename(caminho),
     )

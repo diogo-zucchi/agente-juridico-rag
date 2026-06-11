@@ -13,164 +13,117 @@
       --texto:   #1e293b;
       --verde:   #16a34a;
       --laranja: #ea580c;
+      --amarelo: #f59e0b;
     }
-
     * { box-sizing: border-box; margin: 0; padding: 0; }
-
     body {
       font-family: 'Segoe UI', sans-serif;
       background: var(--cinza);
       color: var(--texto);
       min-height: 100vh;
     }
-
     header {
       background: var(--azul);
       color: white;
       padding: 1.2rem 2rem;
-      display: flex;
-      align-items: center;
-      gap: 1rem;
+      display: flex; align-items: center; gap: 1rem;
       box-shadow: 0 2px 8px rgba(0,0,0,.3);
     }
     header h1 { font-size: 1.3rem; font-weight: 700; }
     header span { font-size: .85rem; opacity: .75; }
 
+    .tabs {
+      display: flex; gap: .5rem;
+      max-width: 1100px; margin: 1.2rem auto 0; padding: 0 1rem;
+    }
+    .tab {
+      padding: .6rem 1.2rem; border-radius: 8px 8px 0 0;
+      background: #e2e8f0; cursor: pointer; font-weight: 600;
+      font-size: .9rem; color: #475569; border: none;
+    }
+    .tab.active { background: white; color: var(--azul); }
+
     .container {
-      max-width: 1100px;
-      margin: 0 auto;
-      padding: 2rem 1rem;
-      display: grid;
-      grid-template-columns: 1fr 300px;
-      gap: 1.5rem;
+      max-width: 1100px; margin: 0 auto; padding: 1rem;
+      display: grid; grid-template-columns: 1fr 300px; gap: 1.5rem;
     }
-    @media (max-width: 760px) {
-      .container { grid-template-columns: 1fr; }
-    }
+    @media (max-width: 760px) { .container { grid-template-columns: 1fr; } }
 
     .card {
-      background: white;
-      border-radius: 12px;
-      padding: 1.5rem;
-      box-shadow: 0 1px 4px rgba(0,0,0,.08);
+      background: white; border-radius: 12px; padding: 1.5rem;
+      box-shadow: 0 1px 4px rgba(0,0,0,.08); margin-bottom: 1.25rem;
     }
     .card h2 { font-size: 1rem; color: var(--azul); margin-bottom: 1rem; }
 
-    #pergunta {
-      width: 100%;
-      height: 100px;
-      border: 1.5px solid var(--borda);
-      border-radius: 8px;
-      padding: .75rem;
-      font-size: .95rem;
-      resize: vertical;
-      transition: border-color .2s;
+    textarea, select, input[type=text] {
+      width: 100%; border: 1.5px solid var(--borda); border-radius: 8px;
+      padding: .6rem .7rem; font-size: .93rem; font-family: inherit;
     }
-    #pergunta:focus { outline: none; border-color: var(--azul2); }
+    textarea { height: 90px; resize: vertical; }
+    textarea:focus, select:focus, input:focus { outline: none; border-color: var(--azul2); }
+    label.lbl { display:block; font-size:.82rem; color:#475569; margin:.6rem 0 .25rem; font-weight:600; }
 
-    .btn-row { display: flex; gap: .75rem; margin-top: .75rem; }
-
+    .btn-row { display: flex; gap: .75rem; margin-top: .75rem; flex-wrap: wrap; }
     button {
-      padding: .6rem 1.4rem;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      font-size: .9rem;
-      font-weight: 600;
-      transition: opacity .2s;
+      padding: .6rem 1.4rem; border: none; border-radius: 8px; cursor: pointer;
+      font-size: .9rem; font-weight: 600; transition: opacity .2s;
     }
     button:hover { opacity: .88; }
     button:disabled { opacity: .5; cursor: not-allowed; }
-
     .btn-primary { background: var(--azul2); color: white; }
-    .btn-outline  { background: white; color: var(--azul); border: 1.5px solid var(--azul); }
+    .btn-outline { background: white; color: var(--azul); border: 1.5px solid var(--azul); }
+    .btn-green   { background: var(--verde); color: white; }
 
-    #resposta-box { margin-top: 1.25rem; display: none; }
-    #resposta-texto {
-      background: #f8fafc;
-      border: 1px solid var(--borda);
-      border-radius: 8px;
-      padding: 1rem;
-      white-space: pre-wrap;
-      line-height: 1.65;
-      font-size: .93rem;
+    .resposta-texto {
+      background: #f8fafc; border: 1px solid var(--borda); border-radius: 8px;
+      padding: 1rem; white-space: pre-wrap; line-height: 1.65; font-size: .92rem;
     }
-
-    #fontes-lista { margin-top: 1rem; }
     .fonte-item {
-      background: #eff6ff;
-      border-left: 4px solid var(--azul2);
-      border-radius: 0 6px 6px 0;
-      padding: .6rem .9rem;
-      margin-bottom: .5rem;
-      font-size: .85rem;
+      background: #eff6ff; border-left: 4px solid var(--azul2);
+      border-radius: 0 6px 6px 0; padding: .6rem .9rem; margin-bottom: .5rem; font-size: .85rem;
     }
     .fonte-item strong { display: block; color: var(--azul); }
     .score { color: var(--verde); font-weight: 600; font-size: .78rem; }
 
-    /* ── Upload ── */
-    .upload-card {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-    .upload-card h2 { width: 100%; }
+    /* Estrelas de avaliação */
+    .stars { font-size: 1.7rem; cursor: pointer; user-select: none; letter-spacing: .15rem; }
+    .stars .star { color: #cbd5e1; transition: color .1s; }
+    .stars .star.on { color: var(--amarelo); }
 
-    .upload-area {
-      width: 100%;
-      border-radius: 8px;
-      padding: 1.5rem;
-      text-align: center;
-      cursor: pointer;
-      background: var(--cinza);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: .4rem;
-    }
-    .upload-area input { display: none; }
-    .upload-area p { font-size: .85rem; color: #64748b; }
+    .resultado-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:1rem; }
+    @media (max-width: 700px){ .resultado-grid{ grid-template-columns:1fr; } }
+    .badge { display:inline-block; padding:.15rem .5rem; border-radius:6px; font-size:.72rem; font-weight:700; color:white; }
 
-    #titulo-doc {
-      width: 100%;
-      margin-top: .75rem;
-      padding: .55rem .7rem;
-      border: 1.5px solid var(--borda);
-      border-radius: 8px;
-      font-size: .9rem;
-    }
+    table { width:100%; border-collapse: collapse; font-size:.85rem; }
+    th, td { padding:.5rem .6rem; border-bottom:1px solid var(--cinza); text-align:left; }
+    th { color: var(--azul); }
 
-    #upload-status {
-      width: 100%;
-      margin-top: .75rem;
-      font-size: .85rem;
-      min-height: 1.2em;
-      text-align: center;
-    }
+    .bar-wrap { margin:.4rem 0; }
+    .bar-label { font-size:.78rem; color:#475569; margin-bottom:.15rem; }
+    .bar-track { background:#e2e8f0; border-radius:6px; overflow:hidden; height:22px; }
+    .bar-fill { height:100%; background:var(--azul2); color:white; font-size:.72rem;
+                display:flex; align-items:center; padding-left:.5rem; }
+
     .ok  { color: var(--verde); }
     .err { color: var(--laranja); }
-
-    #historico-lista { max-height: 300px; overflow-y: auto; }
-    .hist-item {
-      padding: .55rem 0;
-      border-bottom: 1px solid var(--cinza);
-      font-size: .83rem;
-      cursor: pointer;
+    .upload-area {
+      width: 100%; border-radius: 8px; padding: 1.2rem; text-align: center;
+      cursor: pointer; background: var(--cinza); display: flex;
+      flex-direction: column; align-items: center; gap: .4rem;
     }
+    .upload-area input { display: none; }
+    #upload-status, #aval-status { font-size:.85rem; min-height:1.2em; margin-top:.5rem; }
+    .hist-item { padding:.55rem 0; border-bottom:1px solid var(--cinza); font-size:.83rem; cursor:pointer; }
     .hist-item:hover { color: var(--azul2); }
-    .hist-data { font-size: .75rem; color: #94a3b8; }
-
+    .hist-data { font-size:.75rem; color:#94a3b8; }
     .spinner {
-      display: inline-block;
-      width: 18px; height: 18px;
-      border: 2.5px solid rgba(255,255,255,.4);
-      border-top-color: white;
-      border-radius: 50%;
-      animation: spin .7s linear infinite;
-      vertical-align: middle;
-      margin-right: .4rem;
+      display:inline-block; width:16px; height:16px; border:2.5px solid rgba(255,255,255,.4);
+      border-top-color:white; border-radius:50%; animation:spin .7s linear infinite;
+      vertical-align:middle; margin-right:.4rem;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
+    .hidden { display:none !important; }
+    .hint { font-size:.78rem; color:#94a3b8; }
   </style>
 </head>
 <body>
@@ -182,203 +135,400 @@
   </div>
 </header>
 
+<div class="tabs">
+  <button class="tab active" data-tab="consulta" onclick="trocarAba('consulta')">Consulta</button>
+  <button class="tab" data-tab="avaliacao" onclick="trocarAba('avaliacao')">Avaliação (Comparar LLMs)</button>
+  <button class="tab" data-tab="resultados" onclick="trocarAba('resultados')">Resultados</button>
+</div>
+
 <div class="container">
-
   <div>
-    <div class="card">
-      <h2>Consulta Jurídica</h2>
-      <textarea id="pergunta">
-      </textarea>
-      <div class="btn-row">
-        <button class="btn-primary" id="btn-consultar" onclick="consultar()">Consultar</button>
-        <button class="btn-outline" onclick="limpar()">Limpar</button>
-      </div>
+    <!-- ───────── ABA CONSULTA ───────── -->
+    <div id="aba-consulta">
+      <div class="card">
+        <h2>Consulta Jurídica</h2>
+        <label class="lbl">Pergunta</label>
+        <textarea id="pergunta" placeholder="Digite sua pergunta jurídica..."></textarea>
 
-      <div id="resposta-box">
-        <h2 style="margin-top:1.25rem">Resposta</h2>
-        <div id="resposta-texto"></div>
-        <div id="fontes-lista">
+        <label class="lbl">Modelo de linguagem (LLM)</label>
+        <select id="provedor">
+          <option value="maritaca">Maritaca — Sabiá</option>
+          <option value="deepseek">DeepSeek</option>
+          <option value="openai">ChatGPT (OpenAI)</option>
+        </select>
+
+        <label class="lbl">Documento (opcional — deixe "Todos" para busca ampla)</label>
+        <select id="doc-consulta"><option value="">Todos os documentos</option></select>
+
+        <div class="btn-row">
+          <button class="btn-primary" id="btn-consultar" onclick="consultar()">Consultar</button>
+          <button class="btn-outline" onclick="limpar()">Limpar</button>
+        </div>
+
+        <div id="resposta-box" class="hidden">
+          <h2 style="margin-top:1.25rem">Resposta</h2>
+          <div id="resposta-texto" class="resposta-texto"></div>
           <h2 style="margin-top:1rem">Fontes Utilizadas</h2>
           <div id="fontes-conteudo"></div>
         </div>
       </div>
+
+      <div class="card">
+        <h2>Histórico de Consultas</h2>
+        <div id="historico-lista"><p class="hint">Carregando histórico...</p></div>
+      </div>
     </div>
 
-    <div class="card" style="margin-top:1.25rem">
-      <h2>Histórico de Consultas</h2>
-      <div id="historico-lista">
-        <p style="color:#94a3b8;font-size:.85rem">Carregando histórico...</p>
+    <!-- ───────── ABA AVALIAÇÃO ───────── -->
+    <div id="aba-avaliacao" class="hidden">
+      <div class="card">
+        <h2>Avaliação às cegas — Comparação de LLMs</h2>
+        <p class="hint" style="margin-bottom:.8rem">
+          O sistema gera duas respostas (Resposta A e Resposta B) a partir do mesmo
+          contexto, sem revelar qual LLM gerou cada uma. Dê uma nota de 1 a 5 para cada.
+        </p>
+
+        <label class="lbl">Avaliador (nome — opcional)</label>
+        <input type="text" id="avaliador" placeholder="Ex.: Dra. Fulana (advogada)" />
+
+        <label class="lbl">Documento do teste</label>
+        <select id="doc-aval"><option value="">Selecione um documento...</option></select>
+
+        <label class="lbl">Pergunta</label>
+        <textarea id="pergunta-aval" placeholder="Digite a pergunta a ser avaliada..."></textarea>
+
+        <div class="btn-row">
+          <button class="btn-primary" id="btn-comparar" onclick="comparar()">Gerar comparação</button>
+        </div>
+        <div id="aval-status"></div>
+      </div>
+
+      <div id="comparacao-box" class="hidden">
+        <div id="respostas-container" class="resultado-grid"></div>
+        <div class="card">
+          <div class="btn-row">
+            <button class="btn-green" id="btn-salvar-aval" onclick="salvarAvaliacoes()">Salvar avaliações</button>
+          </div>
+          <div id="save-status" style="margin-top:.6rem;font-size:.88rem"></div>
+          <div id="revelacao" class="hidden" style="margin-top:.6rem;font-size:.85rem"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ───────── ABA RESULTADOS ───────── -->
+    <div id="aba-resultados" class="hidden">
+      <div class="card">
+        <h2>Resultados das Avaliações</h2>
+        <div class="btn-row">
+          <button class="btn-primary" onclick="carregarResultados()">Atualizar</button>
+          <a href="http://localhost:8000/api/v1/resultados/csv" target="_blank">
+            <button class="btn-outline">Baixar CSV</button>
+          </a>
+        </div>
+        <div id="resultados-conteudo" style="margin-top:1rem">
+          <p class="hint">Clique em "Atualizar" para carregar.</p>
+        </div>
       </div>
     </div>
   </div>
 
+  <!-- ───────── SIDEBAR ───────── -->
   <div>
-    <div class="card upload-card">
+    <div class="card">
       <h2>Indexar Documento</h2>
       <label class="upload-area" id="upload-area">
-        <input type="file" id="arquivo-input" accept=".pdf,.txt,.html,.htm"
-               onchange="atualizarNomeArquivo()" />
+        <input type="file" id="arquivo-input" accept=".pdf,.txt,.html,.htm" onchange="atualizarNomeArquivo()" />
         <div style="font-size:2rem">📄</div>
-        <p id="upload-label">Clique ou arraste um arquivo<br><em>PDF, TXT ou HTML</em></p>
+        <p class="hint" id="upload-label">Clique ou arraste um arquivo<br><em>PDF, TXT ou HTML</em></p>
       </label>
-
-      <input type="text" id="titulo-doc" placeholder="Selecione um arquivo..." readonly 
-      style="background:#f1f5f9;cursor:default;color:#64748b;" />
-
-      <button class="btn-primary" style="width:100%;margin-top:.75rem"
-              onclick="fazerUpload()">Indexar</button>
-
+      <input type="text" id="titulo-doc" placeholder="Título do documento" style="margin-top:.6rem" />
+      <label class="lbl">Nível de dificuldade (para o experimento)</label>
+      <select id="dificuldade-doc">
+        <option value="">Não definir</option>
+        <option value="facil">Fácil</option>
+        <option value="medio">Médio</option>
+        <option value="dificil">Difícil</option>
+      </select>
+      <button class="btn-primary" style="width:100%;margin-top:.6rem" onclick="fazerUpload()">Indexar</button>
       <div id="upload-status"></div>
     </div>
 
-    <div class="card" style="margin-top:1rem">
+    <div class="card">
       <h2>Status da API</h2>
-      <div id="api-status" style="font-size:.85rem;color:#94a3b8">Verificando...</div>
+      <div id="api-status" class="hint">Verificando...</div>
     </div>
   </div>
-
 </div>
 
 <script>
   const API_BASE = "http://localhost:8000/api/v1";
+  let respostasAtuais = [];   // [{resposta_id, modelo_llm, rotulo, nota}]
 
   window.addEventListener("load", () => {
-    verificarAPI();
-    carregarHistorico();
+    verificarAPI(); carregarHistorico(); carregarDocumentos();
   });
 
-  async function verificarAPI() {
+  function trocarAba(nome){
+    document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active", t.dataset.tab===nome));
+    ["consulta","avaliacao","resultados"].forEach(a=>{
+      document.getElementById("aba-"+a).classList.toggle("hidden", a!==nome);
+    });
+    if(nome==="resultados") carregarResultados();
+  }
+
+  async function verificarAPI(){
     const el = document.getElementById("api-status");
-    try {
+    try{
       const r = await fetch("http://localhost:8000/health");
       const d = await r.json();
-      el.innerHTML = d.status === "ok"
+      el.innerHTML = d.status==="ok"
         ? '<span style="color:var(--verde)">✅ Online — Banco conectado</span>'
         : '<span style="color:var(--laranja)">⚠️ Banco desconectado</span>';
-    } catch {
-      el.innerHTML = '<span style="color:var(--laranja)">❌ API offline</span>';
-    }
+    }catch{ el.innerHTML = '<span style="color:var(--laranja)">❌ API offline</span>'; }
   }
 
-  async function consultar() {
+  async function carregarDocumentos(){
+    try{
+      const r = await fetch(`${API_BASE}/documentos`);
+      const docs = await r.json();
+      const selConsulta = document.getElementById("doc-consulta");
+      const selAval = document.getElementById("doc-aval");
+      selConsulta.innerHTML = '<option value="">Todos os documentos</option>';
+      selAval.innerHTML = '<option value="">Selecione um documento...</option>';
+      docs.forEach(d=>{
+        const dif = d.nivel_dificuldade ? ` [${d.nivel_dificuldade}]` : "";
+        const opt = `<option value="${d.id}">${d.titulo}${dif}</option>`;
+        selConsulta.innerHTML += opt;
+        selAval.innerHTML += opt;
+      });
+    }catch(e){ console.error("Erro ao carregar documentos", e); }
+  }
+
+  /* ───── Consulta com 1 LLM ───── */
+  async function consultar(){
     const pergunta = document.getElementById("pergunta").value.trim();
-    if (!pergunta) { alert("Digite uma pergunta."); return; }
+    if(!pergunta){ alert("Digite uma pergunta."); return; }
+    const provedor = document.getElementById("provedor").value;
+    const idDoc = document.getElementById("doc-consulta").value || null;
 
     const btn = document.getElementById("btn-consultar");
-    btn.disabled = true;
-    btn.innerHTML = '<span class="spinner"></span>Consultando...';
-
-    const box = document.getElementById("resposta-box");
-    box.style.display = "none";
-
-    try {
-      const r = await fetch(`${API_BASE}/consultar`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pergunta }),
+    btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Consultando...';
+    document.getElementById("resposta-box").classList.add("hidden");
+    try{
+      const r = await fetch(`${API_BASE}/consultar`,{
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({ pergunta, provedor, id_documento: idDoc? Number(idDoc):null })
       });
       const d = await r.json();
-
       document.getElementById("resposta-texto").textContent = d.resposta;
-
-      const fc = document.getElementById("fontes-conteudo");
-      fc.innerHTML = "";
-      if (d.fontes && d.fontes.length > 0) {
-        d.fontes.forEach((f, i) => {
-          fc.innerHTML += `
-            <div class="fonte-item">
-              <strong>[${i+1}] ${f.titulo}</strong>
-              ${f.fonte} &nbsp;
-              <span class="score">score: ${f.score.toFixed(3)}</span>
-              <div style="margin-top:.3rem;color:#475569">
-                ${f.texto_chunk.substring(0, 120)}…
-              </div>
-            </div>`;
-        });
-      } else {
-        fc.innerHTML = '<p style="color:#94a3b8;font-size:.85rem">Nenhuma fonte utilizada.</p>';
-      }
-
-      box.style.display = "block";
+      renderFontes("fontes-conteudo", d.fontes);
+      document.getElementById("resposta-box").classList.remove("hidden");
       carregarHistorico();
-    } catch (e) {
-      alert("Erro ao consultar a API. Verifique se o backend está rodando.");
-      console.error(e);
-    } finally {
-      btn.disabled = false;
-      btn.textContent = "Consultar";
+    }catch(e){ alert("Erro ao consultar a API."); console.error(e); }
+    finally{ btn.disabled=false; btn.textContent="Consultar"; }
+  }
+
+  function renderFontes(elId, fontes){
+    const fc = document.getElementById(elId); fc.innerHTML="";
+    if(fontes && fontes.length){
+      fontes.forEach((f,i)=>{
+        fc.innerHTML += `<div class="fonte-item"><strong>[${i+1}] ${f.titulo}</strong>
+          ${f.fonte} &nbsp;<span class="score">score: ${Number(f.score).toFixed(3)}</span>
+          <div style="margin-top:.3rem;color:#475569">${(f.texto_chunk||"").substring(0,120)}…</div></div>`;
+      });
+    } else { fc.innerHTML = '<p class="hint">Nenhuma fonte utilizada.</p>'; }
+  }
+
+  function limpar(){
+    document.getElementById("pergunta").value="";
+    document.getElementById("resposta-box").classList.add("hidden");
+  }
+
+  /* ───── Comparação às cegas (dinâmica: 2 ou mais LLMs) ───── */
+  function setNota(idx, v){
+    respostasAtuais[idx].nota = v;
+    const el = document.getElementById("stars-" + idx);
+    [...el.children].forEach(s => s.classList.toggle("on", Number(s.dataset.v) <= v));
+  }
+
+  function montarCartoes(){
+    const cont = document.getElementById("respostas-container");
+    cont.innerHTML = "";
+    respostasAtuais.forEach((resp, idx) => {
+      const card = document.createElement("div");
+      card.className = "card";
+      card.innerHTML = `
+        <h2>Resposta ${resp.rotulo}</h2>
+        <div class="resposta-texto">${resp.texto.replace(/</g,"&lt;")}</div>
+        <label class="lbl">Nota (1 a 5)</label>
+        <div class="stars" id="stars-${idx}"></div>
+        <label class="lbl">Comentário (opcional)</label>
+        <textarea id="coment-${idx}" style="height:60px"></textarea>`;
+      cont.appendChild(card);
+      const starsEl = document.getElementById("stars-" + idx);
+      for(let i=1;i<=5;i++){
+        const s = document.createElement("span");
+        s.className="star"; s.textContent="★"; s.dataset.v=i;
+        s.onclick=()=>setNota(idx, i);
+        starsEl.appendChild(s);
+      }
+    });
+  }
+
+  async function comparar(){
+    const pergunta = document.getElementById("pergunta-aval").value.trim();
+    const idDoc = document.getElementById("doc-aval").value;
+    const status = document.getElementById("aval-status");
+    if(!idDoc){ status.innerHTML='<span class="err">Selecione um documento.</span>'; return; }
+    if(!pergunta){ status.innerHTML='<span class="err">Digite a pergunta.</span>'; return; }
+
+    const btn = document.getElementById("btn-comparar");
+    btn.disabled=true; btn.innerHTML='<span class="spinner"></span>Gerando respostas...';
+    status.textContent="";
+    document.getElementById("comparacao-box").classList.add("hidden");
+    document.getElementById("revelacao").classList.add("hidden");
+    try{
+      const r = await fetch(`${API_BASE}/comparar`,{
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({ pergunta, id_documento: Number(idDoc) })
+      });
+      const d = await r.json();
+      respostasAtuais = d.respostas.map(x => ({
+        resposta_id: x.resposta_id,
+        modelo_llm: x.modelo_llm,
+        rotulo: x.rotulo,
+        texto: x.texto,
+        nota: 0,
+      }));
+      montarCartoes();
+      document.getElementById("save-status").textContent="";
+      document.getElementById("comparacao-box").classList.remove("hidden");
+    }catch(e){ status.innerHTML='<span class="err">Erro ao gerar comparação.</span>'; console.error(e); }
+    finally{ btn.disabled=false; btn.textContent="Gerar comparação"; }
+  }
+
+  async function salvarAvaliacoes(){
+    if(respostasAtuais.some(r => r.nota < 1)){
+      document.getElementById("save-status").innerHTML='<span class="err">Dê uma nota (1-5) para todas as respostas.</span>';
+      return;
     }
+    const avaliador = document.getElementById("avaliador").value.trim() || null;
+    const btn = document.getElementById("btn-salvar-aval");
+    btn.disabled=true;
+    try{
+      for(let idx=0; idx<respostasAtuais.length; idx++){
+        const r = respostasAtuais[idx];
+        const coment = document.getElementById("coment-"+idx).value.trim();
+        await enviarAvaliacao(r.resposta_id, r.nota, coment, avaliador);
+      }
+      document.getElementById("save-status").innerHTML='<span class="ok">✅ Avaliações salvas!</span>';
+      // Revela qual LLM era cada uma (só após salvar, para não enviesar)
+      const rev = document.getElementById("revelacao");
+      rev.innerHTML = "Identificação (revelada após salvar): " +
+        respostasAtuais.map(r => `<b>Resposta ${r.rotulo} = ${r.modelo_llm}</b>`).join(" · ");
+      rev.classList.remove("hidden");
+    }catch(e){ document.getElementById("save-status").innerHTML='<span class="err">Erro ao salvar.</span>'; console.error(e); }
+    finally{ btn.disabled=false; }
   }
 
-  function limpar() {
-    document.getElementById("pergunta").value = "";
-    document.getElementById("resposta-box").style.display = "none";
+  async function enviarAvaliacao(id_resposta, nota, comentario, avaliador){
+    const r = await fetch(`${API_BASE}/avaliar`,{
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({ id_resposta, nota, comentario: comentario||null, avaliador })
+    });
+    if(!r.ok) throw new Error("falha ao avaliar");
   }
 
-  function atualizarNomeArquivo() {
+  /* ───── Resultados ───── */
+  async function carregarResultados(){
+    const el = document.getElementById("resultados-conteudo");
+    el.innerHTML = '<p class="hint">Carregando...</p>';
+    try{
+      const r = await fetch(`${API_BASE}/resultados`);
+      const d = await r.json();
+      if(!d.linhas.length){ el.innerHTML='<p class="hint">Ainda não há avaliações salvas.</p>'; return; }
+
+      // Gráfico: nota média por LLM x dificuldade
+      let chart = '<h2 style="margin-bottom:.6rem">Nota média por LLM e dificuldade</h2>';
+      const cores = { maritaca:"#2563eb", deepseek:"#16a34a", openai:"#ea580c" };
+      d.resumo_por_llm_dificuldade.forEach(row=>{
+        const pct = (row.nota_media/5*100).toFixed(0);
+        const cor = cores[row.modelo_llm] || "#64748b";
+        chart += `<div class="bar-wrap"><div class="bar-label">${row.modelo_llm} · ${row.nivel_dificuldade} (n=${row.n})</div>
+          <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${cor}">${row.nota_media}</div></div></div>`;
+      });
+
+      // Resumo geral por LLM
+      let resumo = '<h2 style="margin:1rem 0 .6rem">Média geral por LLM</h2><table><tr><th>LLM</th><th>Nota média</th><th>Avaliações</th></tr>';
+      d.resumo_por_llm.forEach(row=>{
+        resumo += `<tr><td>${row.modelo_llm}</td><td><b>${row.nota_media}</b></td><td>${row.n}</td></tr>`;
+      });
+      resumo += '</table>';
+
+      // Tabela detalhada
+      let tabela = '<h2 style="margin:1rem 0 .6rem">Detalhe</h2><table><tr><th>Doc</th><th>Dif.</th><th>LLM</th><th>Nota</th><th>Avaliador</th></tr>';
+      d.linhas.forEach(l=>{
+        tabela += `<tr><td>${l.documento||"-"}</td><td>${l.nivel_dificuldade||"-"}</td>
+          <td>${l.modelo_llm}</td><td><b>${l.nota}</b></td><td>${l.avaliador||"-"}</td></tr>`;
+      });
+      tabela += '</table>';
+
+      el.innerHTML = chart + resumo + tabela;
+    }catch(e){ el.innerHTML='<p class="err">Erro ao carregar resultados.</p>'; console.error(e); }
+  }
+
+  /* ───── Upload ───── */
+  function atualizarNomeArquivo(){
     const input = document.getElementById("arquivo-input");
-    const label = document.getElementById("upload-label");
-    if (input.files.length > 0) {
-      const nome = input.files[0].name.replace(/\.[^.]+$/, "").replace(/[-_]/g, " ");
-      label.textContent = input.files[0].name;
+    if(input.files.length>0){
+      const nome = input.files[0].name.replace(/\.[^.]+$/,"").replace(/[-_]/g," ");
+      document.getElementById("upload-label").textContent = input.files[0].name;
       document.getElementById("titulo-doc").value = nome;
     }
   }
-
-  async function fazerUpload() {
-    const input  = document.getElementById("arquivo-input");
+  async function fazerUpload(){
+    const input = document.getElementById("arquivo-input");
     const titulo = document.getElementById("titulo-doc").value.trim();
+    const dif = document.getElementById("dificuldade-doc").value;
     const status = document.getElementById("upload-status");
-
-    if (!input.files.length) { status.innerHTML = '<span class="err">Selecione um arquivo.</span>'; return; }
-    if (!titulo)              { status.innerHTML = '<span class="err">Informe o título.</span>'; return; }
-
-    status.textContent = "Indexando…";
-
+    if(!input.files.length){ status.innerHTML='<span class="err">Selecione um arquivo.</span>'; return; }
+    if(!titulo){ status.innerHTML='<span class="err">Informe o título.</span>'; return; }
+    status.textContent="Indexando…";
     const fd = new FormData();
     fd.append("arquivo", input.files[0]);
     fd.append("titulo", titulo);
-
-    try {
-      const r = await fetch(`${API_BASE}/ingerir`, { method: "POST", body: fd });
+    if(dif) fd.append("nivel_dificuldade", dif);
+    try{
+      const r = await fetch(`${API_BASE}/ingerir`,{ method:"POST", body: fd });
       const d = await r.json();
-      if (r.ok) {
+      if(r.ok){
         status.innerHTML = `<span class="ok">✅ ${d.mensagem} (ID: ${d.documento_id})</span>`;
-        input.value = "";
-        document.getElementById("upload-label").innerHTML =
-          "Clique ou arraste um arquivo<br><em>PDF, TXT ou HTML</em>";
-        document.getElementById("titulo-doc").value = "";
-      } else {
-        status.innerHTML = `<span class="err">❌ ${d.detail}</span>`;
-      }
-    } catch (e) {
-      status.innerHTML = '<span class="err">❌ Erro de conexão com a API.</span>';
-    }
+        input.value=""; document.getElementById("titulo-doc").value="";
+        document.getElementById("upload-label").innerHTML="Clique ou arraste um arquivo<br><em>PDF, TXT ou HTML</em>";
+        document.getElementById("dificuldade-doc").value="";
+        carregarDocumentos();
+      } else { status.innerHTML = `<span class="err">❌ ${d.detail}</span>`; }
+    }catch(e){ status.innerHTML='<span class="err">❌ Erro de conexão com a API.</span>'; }
   }
 
-  async function carregarHistorico() {
+  /* ───── Histórico ───── */
+  async function carregarHistorico(){
     const lista = document.getElementById("historico-lista");
-    try {
+    try{
       const r = await fetch(`${API_BASE}/historico?limite=15`);
       const d = await r.json();
-      if (!d.length) {
-        lista.innerHTML = '<p style="color:#94a3b8;font-size:.85rem">Nenhuma consulta ainda.</p>';
-        return;
-      }
-      lista.innerHTML = d.map(c => `
+      if(!d.length){ lista.innerHTML='<p class="hint">Nenhuma consulta ainda.</p>'; return; }
+      lista.innerHTML = d.map(c=>`
         <div class="hist-item" onclick="preencherPergunta('${c.pergunta.replace(/'/g,"\\'")}')">
-          <div>${c.pergunta.substring(0, 70)}${c.pergunta.length > 70 ? "…" : ""}</div>
+          <div>${c.pergunta.substring(0,70)}${c.pergunta.length>70?"…":""}</div>
           <div class="hist-data">${new Date(c.data_hora).toLocaleString("pt-BR")}</div>
-        </div>
-      `).join("");
-    } catch {
-      lista.innerHTML = '<p style="color:#94a3b8;font-size:.85rem">Histórico indisponível.</p>';
-    }
+        </div>`).join("");
+    }catch{ lista.innerHTML='<p class="hint">Histórico indisponível.</p>'; }
   }
-
-  function preencherPergunta(texto) {
+  function preencherPergunta(texto){
     document.getElementById("pergunta").value = texto;
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    trocarAba("consulta");
+    window.scrollTo({ top:0, behavior:"smooth" });
   }
 </script>
 </body>
