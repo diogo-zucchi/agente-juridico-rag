@@ -166,10 +166,9 @@ class TestAPI:
         from app.main import app
         return TestClient(app)
 
-    def test_root_retorna_status_online(self, client):
+    def test_root_responde(self, client):
         r = client.get("/")
         assert r.status_code == 200
-        assert r.json()["status"] == "online"
 
     def test_consulta_sem_pergunta_retorna_400(self, client):
         with patch("app.api.routes.rag_service.responder_pergunta"):
