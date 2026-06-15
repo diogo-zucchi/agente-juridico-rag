@@ -8,7 +8,7 @@ from app.core.config import get_settings
 from app.models.models import (
     Chunk, Consulta, Resposta, RespostaDocumento, Avaliacao, Documento
 )
-from app.services.ingestao_service import buscar_chunks
+from app.services.ingestao_service import buscar_chunks, _get_faiss_index
 
 PROMPT_JURIDICO = """Você é um assistente jurídico especializado no direito brasileiro.
 Utilize EXCLUSIVAMENTE os trechos de documentos jurídicos fornecidos abaixo.
@@ -109,7 +109,8 @@ def _recuperar_chunks(
     """
     if id_documento is not None:
         # super-amostra para garantir chunks suficientes do documento alvo
-        resultados = buscar_chunks(pergunta, top_k=max(k * 20, 50))
+        index, _ = _get_faiss_index()
+        resultados = buscar_chunks(pergunta, top_k=max(index.ntotal, k))
     else:
         resultados = buscar_chunks(pergunta, top_k=k)
 
