@@ -27,17 +27,17 @@ A ferramenta opera com o **Sabiá**; DeepSeek e GPT foram integrados exclusivame
 ## Arquitetura
 
 - **Frontend:** página única em HTML, CSS e JavaScript (`frontend/index.html`), consumindo a API por requisições assíncronas.
-- **Backend:** Python 3.11 + FastAPI, organizado em camadas (rotas → serviços → persistência).
-- **Persistência:** PostgreSQL (dados estruturados) + índice vetorial FAISS em disco (busca por similaridade).
+- **Backend:** Python 3.13 + FastAPI, organizado em camadas (rotas → serviços → persistência).
+- **Persistência:** PostgreSQL com a extensão pgvector — dados estruturados e vetores no mesmo banco.
 - **Embeddings:** `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2` (suporte a português, execução local).
 
-O texto fica no banco relacional e os vetores no índice FAISS, ligados por um arquivo de mapeamento que relaciona cada posição do índice ao `id` do chunk no banco (ver "Persistência do índice").
+Cada chunk guarda o texto e o seu vetor na mesma linha da tabela `chunks` (ver "Persistência dos vetores").
 
 ---
 
 ## Pré-requisitos
 
-- Python 3.11
+- Python 3.13
 - Docker Desktop
 
 ---
@@ -79,7 +79,7 @@ OPENAI_BASE_URL=https://api.openai.com/v1
 
 # ── Embeddings e índice vetorial ─────────────────────────
 EMBEDDING_MODEL=sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
-FAISS_INDEX_PATH=./backend/data/faiss_index
+EMBEDDING_DIM=384
 
 # ── API ──────────────────────────────────────────────────
 API_HOST=0.0.0.0
@@ -156,14 +156,14 @@ Prefixo: `/api/v1`
 
 ---
 
-## Persistência do índice
+## Persistência dos vetores
 
-O índice FAISS é mantido em disco junto a um arquivo de mapeamento:
+Os vetores ficam na coluna `chunks.embedding` (`vector(384)`, extensão pgvector), ao lado do texto do chunk:
 
-- `backend/data/faiss_index` — índice FAISS (`IndexFlatIP`, similaridade por produto interno sobre embeddings normalizados), gravado com `faiss.write_index`.
-- `backend/data/faiss_index.ids.json` — **arquivo de mapeamento**: lista de `id`s dos chunks no PostgreSQL na mesma ordem dos vetores. Como o `IndexFlatIP` devolve apenas a posição do vetor na busca (0, 1, 2…), esse arquivo traduz a posição retornada pelo FAISS no registro correto do banco.
-
-Ambos são gravados e recarregados em conjunto para manter a coerência entre o texto (no banco) e os vetores (no índice).
+- **Busca:** produto interno (operador `<#>`) sobre embeddings normalizados — equivalente à similaridade de cosseno e ao mesmo escore que o antigo `IndexFlatIP` do FAISS produzia.
+- **Busca exata:** não há índice vetorial aproximado. Com poucos milhares de chunks a varredura é rápida e o resultado é determinístico. Se o volume crescer, um índice HNSW (`vector_ip_ops`) pode ser criado (ver `scripts/init_db.sql`).
+- **Filtro por documento:** feito na própria consulta SQL (`WHERE id_documento = ...`).
+- **Consistência:** texto e vetores de um documento são gravados na mesma transação.
 
 ---
 

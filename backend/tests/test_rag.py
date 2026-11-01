@@ -50,6 +50,21 @@ class TestChunking:
         for palavra in palavras_chave:
             assert palavra in texto_chunks
 
+    def test_paragrafo_longo_nao_duplica_buffer(self):
+        """
+        Regressão: após um parágrafo maior que o chunk, o buffer anterior
+        era reaproveitado e aparecia duplicado (e fora de ordem) no chunk seguinte.
+        """
+        from app.services.ingestao_service import settings
+        curto_a = "Art. 1º Primeiro dispositivo."
+        longo   = "B" * (settings.chunk_size + 100)
+        curto_c = "Art. 3º Terceiro dispositivo."
+        chunks = _dividir_em_chunks("\n\n".join([curto_a, longo, curto_c]))
+
+        assert sum(curto_a in c for c in chunks) == 1
+        assert chunks[0] == curto_a
+        assert chunks[-1] == curto_c
+
 
 # ─────────────────────────────────────────────
 # Testes de Leitura de Arquivo
@@ -86,9 +101,64 @@ class TestLeituraArquivo:
 # Testes de Integração (com mock do banco)
 # ─────────────────────────────────────────────
 
+class TestBuscaVetorial:
+    def _buscar(self, id_documento=None):
+        import numpy as np
+        from app.services.ingestao_service import buscar_chunks
+
+        chunk_mock = MagicMock()
+        db_mock = MagicMock()
+        # <#> devolve o produto interno negativo
+        db_mock.execute.return_value.all.return_value = [(chunk_mock, -0.82)]
+
+        with patch("app.services.ingestao_service.gerar_embeddings",
+                   return_value=np.zeros((1, 384), dtype="float32")):
+            resultado = buscar_chunks(db_mock, "pergunta", top_k=3,
+                                      id_documento=id_documento)
+
+        from sqlalchemy.dialects import postgresql
+        stmt = db_mock.execute.call_args[0][0]
+        sql = str(stmt.compile(dialect=postgresql.dialect()))
+        return resultado, chunk_mock, sql
+
+    def test_usa_produto_interno_do_pgvector(self):
+        resultado, chunk_mock, sql = self._buscar()
+        assert "<#>" in sql
+        assert "LIMIT" in sql
+        assert "chunks.id_documento =" not in sql
+        # score volta positivo, como no antigo IndexFlatIP
+        assert resultado == [(chunk_mock, pytest.approx(0.82))]
+
+    def test_filtra_por_documento_no_banco(self):
+        _, _, sql = self._buscar(id_documento=7)
+        assert "chunks.id_documento =" in sql
+
+
 class TestRagService:
+    def test_recuperar_chunks_repassa_documento_e_scores(self):
+        from app.services import rag_service
+
+        chunk = MagicMock()
+        chunk.id = 10
+        chunk.texto_chunk = "Art. 16. São beneficiários..."
+        chunk.documento.titulo = "Lei 8.213/91"
+        chunk.documento.fonte.nome = "Planalto"
+
+        with patch("app.services.rag_service.buscar_chunks",
+                   return_value=[(chunk, 0.9)]) as busca:
+            fontes = rag_service._recuperar_chunks(MagicMock(), "dependentes", 5, id_documento=3)
+
+        assert busca.call_args.kwargs["id_documento"] == 3
+        assert fontes == [{
+            "chunk_id": 10,
+            "titulo": "Lei 8.213/91",
+            "fonte": "Planalto",
+            "texto_chunk": "Art. 16. São beneficiários...",
+            "score": 0.9,
+        }]
+
     def test_responder_sem_documentos_indexados(self):
-        """Sem índice FAISS, deve retornar mensagem de aviso."""
+        """Sem chunks indexados, deve retornar mensagem de aviso."""
         from app.services import rag_service
         from app.services.ingestao_service import buscar_chunks
 

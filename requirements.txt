@@ -1,7 +1,6 @@
 langchain==0.3.25
 langchain-community==0.3.24
 
-faiss-cpu==1.13.2
 sentence-transformers==3.4.1
 
 psycopg[binary]==3.2.9
@@ -16,7 +15,7 @@ pydantic-settings==2.9.1
 python-multipart==0.0.20
 
 pypdf==5.4.0
-pymupdf==1.24.10
+pymupdf==1.24.11
 beautifulsoup4==4.13.4
 requests==2.32.3
 httpx==0.28.1

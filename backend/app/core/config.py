@@ -19,8 +19,8 @@ class Settings(BaseSettings):
     openai_base_url: str = "https://api.openai.com/v1"
 
     embedding_model: str = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
-
-    faiss_index_path: str = "./data/faiss_index"
+    # dimensão dos vetores do modelo acima; deve bater com vector(N) em chunks.embedding
+    embedding_dim: int = 384
 
     api_host: str = "0.0.0.0"
     api_port: int = 8000

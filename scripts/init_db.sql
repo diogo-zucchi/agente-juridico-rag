@@ -46,10 +46,16 @@ CREATE TABLE IF NOT EXISTS chunks (
     criado_em    TIMESTAMP DEFAULT NOW()
 );
 
--- Índice vetorial para busca por similaridade (cosine)
-CREATE INDEX IF NOT EXISTS chunks_embedding_idx
-    ON chunks USING ivfflat (embedding vector_cosine_ops)
-    WITH (lists = 100);
+-- Sem índice vetorial de propósito: com poucos milhares de chunks a busca
+-- exata (varredura sequencial) é rápida e devolve os mesmos resultados do
+-- antigo IndexFlatIP do FAISS. Um ivfflat criado com a tabela vazia tem
+-- centroides ruins e, combinado com filtro por documento, pode devolver
+-- menos de k resultados. Se o volume crescer, prefira HNSW:
+--   CREATE INDEX chunks_embedding_idx ON chunks
+--       USING hnsw (embedding vector_ip_ops);
+
+-- Filtro por documento (busca restrita a um documento)
+CREATE INDEX IF NOT EXISTS chunks_id_documento_idx ON chunks (id_documento);
 
 -- --------------------------------------------------------
 -- Tabela: CONSULTAS

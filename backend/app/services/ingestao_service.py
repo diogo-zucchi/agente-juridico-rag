@@ -5,18 +5,16 @@ Responsável por:
   1. Ler arquivos (PDF, TXT, HTML)
   2. Dividir em chunks
   3. Gerar embeddings
-  4. Salvar no PostgreSQL e no índice FAISS
+  4. Salvar texto e vetores no PostgreSQL (pgvector)
 """
 import hashlib
 import os
-import json
 from pathlib import Path
 from typing import List, Tuple
 
-import faiss
-import numpy as np
 from loguru import logger
 from sentence_transformers import SentenceTransformer
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
@@ -36,47 +34,22 @@ def _get_embedding_model() -> SentenceTransformer:
     if _embedding_model is None:
         logger.info(f"Carregando modelo de embeddings: {settings.embedding_model}")
         _embedding_model = SentenceTransformer(settings.embedding_model)
+        dim = _embedding_model.get_sentence_embedding_dimension()
+        if dim != settings.embedding_dim:
+            raise ValueError(
+                f"O modelo de embeddings gera vetores de dimensão {dim}, mas a "
+                f"coluna chunks.embedding espera {settings.embedding_dim}. "
+                "Ajuste EMBEDDING_DIM e a coluna vector(...) no banco."
+            )
     return _embedding_model
 
 
-# ─────────────────────────────────────────────
-# FAISS Index
-# ─────────────────────────────────────────────
-_faiss_index: faiss.Index | None = None
-_chunk_ids: List[int] = []     # mapeia posição FAISS -> id do chunk no banco
-
-
-def _get_faiss_index(dim: int = 384) -> Tuple[faiss.Index, List[int]]:
-    """Carrega ou cria o índice FAISS."""
-    global _faiss_index, _chunk_ids
-    
-    # Caminho absoluto fixo, independente de onde a API é executada
-    base_dir = Path(__file__).resolve().parent.parent.parent
-    index_path = base_dir / "data" / "faiss_index"
-    ids_path   = index_path.with_suffix(".ids.json")
-
-    if _faiss_index is None:
-        if index_path.exists():
-            logger.info("Carregando índice FAISS existente...")
-            _faiss_index = faiss.read_index(str(index_path))
-            _chunk_ids   = json.loads(ids_path.read_text()) if ids_path.exists() else []
-        else:
-            logger.info("Criando novo índice FAISS (IndexFlatIP)...")
-            index_path.parent.mkdir(parents=True, exist_ok=True)
-            _faiss_index = faiss.IndexFlatIP(dim)  
-            _chunk_ids   = []
-
-    return _faiss_index, _chunk_ids
-
-
-def _salvar_faiss():
-    base_dir = Path(__file__).resolve().parent.parent.parent
-    index_path = base_dir / "data" / "faiss_index"
-    ids_path   = index_path.with_suffix(".ids.json")
-    index_path.parent.mkdir(parents=True, exist_ok=True)
-    faiss.write_index(_faiss_index, str(index_path))
-    ids_path.write_text(json.dumps(_chunk_ids))
-    logger.info(f"Índice FAISS salvo em {index_path}")
+def gerar_embeddings(textos: List[str], show_progress_bar: bool = False):
+    """Embeddings normalizados (norma 1): produto interno = cosseno."""
+    modelo = _get_embedding_model()
+    return modelo.encode(
+        textos, show_progress_bar=show_progress_bar, normalize_embeddings=True
+    )
 
 
 # ─────────────────────────────────────────────
@@ -155,6 +128,9 @@ def _dividir_em_chunks(texto: str) -> List[str]:
             if len(paragrafo) > tamanho:
                 for i in range(0, len(paragrafo), tamanho - overlap):
                     chunks.append(paragrafo[i : i + tamanho])
+                # o buffer já foi emitido: zera para não duplicá-lo
+                # no próximo chunk
+                buffer = ""
             else:
                 buffer = paragrafo
 
@@ -177,7 +153,9 @@ def ingerir_documento(
 ) -> Documento:
     """
     Pipeline completo:
-      ler arquivo → calcular hash → chunks → embeddings → salvar banco + FAISS
+      ler arquivo → calcular hash → chunks → embeddings → salvar no banco
+    Texto e vetores são gravados na mesma transação: ou o documento
+    inteiro fica indexado, ou nada é gravado.
     """
     # 1. Leitura
     logger.info(f"Lendo arquivo: {caminho}")
@@ -207,30 +185,17 @@ def ingerir_documento(
     logger.info(f"Documento dividido em {len(lista_chunks)} chunks.")
 
     # 5. Embeddings
-    modelo = _get_embedding_model()
-    embeddings = modelo.encode(lista_chunks, show_progress_bar=True, normalize_embeddings=True)
+    embeddings = gerar_embeddings(lista_chunks, show_progress_bar=True)
 
-    # 6. Salvar chunks no banco
-    chunks_db = []
+    # 6. Salvar chunks e vetores no banco
     for idx, (chunk_texto, emb) in enumerate(zip(lista_chunks, embeddings)):
-        chunk = Chunk(
+        db.add(Chunk(
             id_documento=doc.id,
             texto_chunk=chunk_texto,
             indice_chunk=idx,
-        )
-        db.add(chunk)
-        chunks_db.append((chunk, emb))
+            embedding=emb,
+        ))
 
-    db.flush()
-
-    # 7. Adicionar ao FAISS
-    index, ids = _get_faiss_index(dim=embeddings.shape[1])
-    vetores = np.array([emb for _, emb in chunks_db], dtype="float32")
-    index.add(vetores)
-    for chunk, _ in chunks_db:
-        ids.append(chunk.id)
-
-    _salvar_faiss()
     db.commit()
 
     logger.info(f"Documento '{titulo}' indexado com sucesso ({len(lista_chunks)} chunks).")
@@ -241,23 +206,36 @@ def ingerir_documento(
 # Busca semântica (usada pelo retriever)
 # ─────────────────────────────────────────────
 
-def buscar_chunks(pergunta: str, top_k: int | None = None) -> List[Tuple[int, float]]:
+def buscar_chunks(
+    db: Session,
+    pergunta: str,
+    top_k: int | None = None,
+    id_documento: int | None = None,
+) -> List[Tuple[Chunk, float]]:
     """
-    Retorna lista de (chunk_id, score) ordenada por similaridade.
+    Retorna lista de (chunk, score) ordenada por similaridade.
+    Se id_documento for informado, a busca é restrita àquele documento.
+
+    Busca exata (sem índice aproximado): o score é o produto interno
+    entre embeddings normalizados, o mesmo do antigo IndexFlatIP do FAISS.
     """
     k = top_k or settings.top_k_results
-    modelo = _get_embedding_model()
-    vetor_pergunta = modelo.encode([pergunta], normalize_embeddings=True).astype("float32")
+    vetor_pergunta = gerar_embeddings([pergunta])[0]
 
-    index, ids = _get_faiss_index()
-    if index.ntotal == 0:
-        logger.warning("Índice FAISS vazio! Indexe documentos primeiro.")
-        return []
+    # operador <#> do pgvector: devolve o produto interno NEGATIVO
+    distancia = Chunk.embedding.max_inner_product(vetor_pergunta)
 
-    scores, posicoes = index.search(vetor_pergunta, k)
-    resultados = []
-    for pos, score in zip(posicoes[0], scores[0]):
-        if pos >= 0 and pos < len(ids):
-            resultados.append((ids[pos], float(score)))
+    stmt = (
+        select(Chunk, distancia)
+        .where(Chunk.embedding.isnot(None))
+        .order_by(distancia)
+        .limit(k)
+    )
+    if id_documento is not None:
+        stmt = stmt.where(Chunk.id_documento == id_documento)
 
-    return resultados
+    resultados = db.execute(stmt).all()
+    if not resultados:
+        logger.warning("Nenhum chunk indexado encontrado. Indexe documentos primeiro.")
+
+    return [(chunk, -float(dist)) for chunk, dist in resultados]

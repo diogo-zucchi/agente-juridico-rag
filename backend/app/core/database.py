@@ -33,6 +33,17 @@ def get_db():
         db.close()
 
 
+def criar_tabelas():
+    """
+    Habilita o pgvector e cria as tabelas que ainda não existem.
+    """
+    from app.models import models  # noqa: F401 — registra os modelos no Base
+
+    with engine.begin() as conn:
+        conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
+    Base.metadata.create_all(bind=engine)
+
+
 def verificar_conexao():
     try:
         with engine.connect() as conn:

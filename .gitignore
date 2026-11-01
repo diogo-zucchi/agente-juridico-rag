@@ -16,7 +16,7 @@ build/
 # Dados 
 data/raw/
 data/processed/
-data/faiss_index*
+**/data/faiss_index*
 
 # Logs
 logs/

@@ -7,6 +7,8 @@ from sqlalchemy import (
     DateTime, ForeignKey, func
 )
 from sqlalchemy.orm import relationship
+from pgvector.sqlalchemy import Vector
+from app.core.config import get_settings
 from app.core.database import Base
 
 
@@ -47,7 +49,8 @@ class Chunk(Base):
     id_documento = Column(Integer, ForeignKey("documentos.id", ondelete="CASCADE"))
     texto_chunk  = Column(Text, nullable=False)
     indice_chunk = Column(Integer, nullable=False)
-    # embedding armazenado como texto JSON (fallback sem pgvector instalado)
+    # vetor normalizado do texto_chunk (pgvector)
+    embedding    = Column(Vector(get_settings().embedding_dim))
     criado_em    = Column(DateTime, default=func.now())
 
     documento = relationship("Documento", back_populates="chunks")

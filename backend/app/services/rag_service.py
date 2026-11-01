@@ -6,9 +6,9 @@ from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.models.models import (
-    Chunk, Consulta, Resposta, RespostaDocumento, Avaliacao, Documento
+    Consulta, Resposta, RespostaDocumento, Avaliacao
 )
-from app.services.ingestao_service import buscar_chunks, _get_faiss_index
+from app.services.ingestao_service import buscar_chunks
 
 PROMPT_JURIDICO = """Você é um assistente jurídico especializado no direito brasileiro.
 Utilize EXCLUSIVAMENTE os trechos de documentos jurídicos fornecidos abaixo.
@@ -104,29 +104,13 @@ def _recuperar_chunks(
 ) -> List[Dict]:
     """
     Retorna os chunks mais relevantes já enriquecidos com título/fonte.
-    Se id_documento for informado, a busca é restrita àquele documento:
-    super-amostra o FAISS e depois filtra pelos chunks do documento.
+    Se id_documento for informado, a busca é restrita àquele documento
+    (filtro aplicado no próprio banco, junto da busca vetorial).
     """
-    if id_documento is not None:
-        # super-amostra para garantir chunks suficientes do documento alvo
-        index, _ = _get_faiss_index()
-        resultados = buscar_chunks(pergunta, top_k=max(index.ntotal, k))
-    else:
-        resultados = buscar_chunks(pergunta, top_k=k)
-
-    if not resultados:
-        return []
-
-    chunk_ids = [cid for cid, _ in resultados]
-    scores_map = {cid: score for cid, score in resultados}
-
-    query = db.query(Chunk).filter(Chunk.id.in_(chunk_ids))
-    if id_documento is not None:
-        query = query.filter(Chunk.id_documento == id_documento)
-    chunks_db = query.all()
+    resultados = buscar_chunks(db, pergunta, top_k=k, id_documento=id_documento)
 
     chunks_com_score = []
-    for chunk in chunks_db:
+    for chunk, score in resultados:
         doc = chunk.documento
         fonte = doc.fonte.nome if doc and doc.fonte else "Fonte desconhecida"
         chunks_com_score.append({
@@ -134,11 +118,9 @@ def _recuperar_chunks(
             "titulo": doc.titulo if doc else "Documento",
             "fonte": fonte,
             "texto_chunk": chunk.texto_chunk,
-            "score": scores_map.get(chunk.id, 0.0),
+            "score": score,
         })
-
-    chunks_com_score.sort(key=lambda x: x["score"], reverse=True)
-    return chunks_com_score[:k]
+    return chunks_com_score
 
 
 def _gerar_texto(provedor: str, chunks_com_score: List[Dict], pergunta: str) -> str:

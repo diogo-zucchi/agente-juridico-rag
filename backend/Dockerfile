@@ -1,4 +1,4 @@
-FROM python:3.11-slim
+FROM python:3.13-slim
 
 WORKDIR /app
 
@@ -14,7 +14,7 @@ RUN pip install --no-cache-dir -r /tmp/requirements.txt
 COPY . /app
 
 # Diretórios necessários
-RUN mkdir -p /app/data/faiss_index /app/logs
+RUN mkdir -p /app/logs
 
 EXPOSE 8000
 

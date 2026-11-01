@@ -18,8 +18,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from app.core.database import SessionLocal, verificar_conexao, engine
-from app.models.models import Base
+from app.core.database import SessionLocal, verificar_conexao, criar_tabelas
 from app.services.ingestao_service import ingerir_documento
 
 EXTENSOES_ACEITAS = {".pdf", ".txt", ".html", ".htm"}
@@ -63,7 +62,7 @@ def main():
         logger.error("Banco de dados indisponível. Abortando.")
         sys.exit(1)
 
-    Base.metadata.create_all(bind=engine)
+    criar_tabelas()
     indexar_pasta(args.pasta, args.fonte_id)
 
 

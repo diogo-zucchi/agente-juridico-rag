@@ -5,8 +5,7 @@ from loguru import logger
 import sys, os
 
 from app.core.config import get_settings
-from app.core.database import verificar_conexao, engine
-from app.models.models import Base
+from app.core.database import verificar_conexao, criar_tabelas
 from app.api.routes import router
 
 settings = get_settings()
@@ -53,7 +52,7 @@ async def startup():
         logger.error("Banco de dados indisponível. Verifique a configuração.")
     else:
         # Cria tabelas que ainda não existem (não substitui o init_db.sql em prod)
-        Base.metadata.create_all(bind=engine)
+        criar_tabelas()
         logger.info("Tabelas verificadas/criadas.")
 
 
