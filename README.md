@@ -31,7 +31,7 @@ A ferramenta opera com o **Sabiá**; DeepSeek e GPT foram integrados exclusivame
 - **Persistência:** PostgreSQL com a extensão pgvector — dados estruturados e vetores no mesmo banco.
 - **Embeddings:** `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2` (suporte a português, execução local).
 
-Cada chunk guarda o texto e o seu vetor na mesma linha da tabela `chunks` (ver "Persistência dos vetores").
+Cada chunk guarda o texto e o seu vetor na mesma linha da tabela `chunks` (ver "Persistência dos vetores"). Textos de lei recebem tratamento próprio na fragmentação (ver "Fragmentação de textos legais").
 
 ---
 
@@ -90,6 +90,7 @@ DEBUG=true
 TOP_K_RESULTS=5
 CHUNK_SIZE=512
 CHUNK_OVERLAP=50
+ARTIGO_MAX_CHARS=4000
 
 # ── Logs ─────────────────────────────────────────────────
 LOG_LEVEL=INFO
@@ -121,7 +122,7 @@ python -m uvicorn app.main:app --reload
 
 Documentação interativa da API (Swagger): `http://localhost:8000/docs`.
 
-> Alternativa: `docker compose up` sobe banco e backend juntos (serviço `backend` no `docker-compose.yml`).
+> Alternativa: `docker compose up --build` sobe banco e backend juntos, sem precisar de Python local. Dentro do compose o backend acessa o banco pelo host `postgres` (o `DATABASE_URL` do `.env` é sobrescrito), e o modelo de embeddings fica em cache num volume. O `.env` é opcional nesse modo; sem ele, valem os valores padrão.
 
 ---
 
@@ -167,6 +168,19 @@ Os vetores ficam na coluna `chunks.embedding` (`vector(384)`, extensão pgvector
 
 ---
 
+## Fragmentação de textos legais
+
+Leis copiadas do Planalto ("texto compilado") trazem todas as redações que cada dispositivo já teve, em ordem cronológica, inclusive as de medidas provisórias que perderam a vigência. Quando o texto tem vários `Art. N` no início de linha, a ingestão (`backend/app/services/texto_legal.py`):
+
+1. **Mantém só a redação vigente:** reconhece a hierarquia artigo > parágrafo > inciso > alínea > item; quando um dispositivo reaparece sob o mesmo pai, a redação nova substitui a anterior (com os filhos dela).
+2. **Resume os revogados:** um dispositivo revogado vira só rótulo + nota, por exemplo `IV - (Revogada pela Lei nº 9.032, de 1995)`, e os filhos dele são descartados.
+3. **Divide por artigo:** um chunk nunca mistura dois artigos. Um artigo longo é dividido nos limites dos dispositivos, e cada chunk repete o caput (resumido) no início.
+4. **Entrega o artigo inteiro ao LLM:** a busca continua sobre os chunks pequenos, mas o artigo do chunk encontrado é remontado e enviado inteiro ao modelo, se tiver até `ARTIGO_MAX_CHARS` caracteres. Artigos repetidos entre os resultados contam uma vez só.
+
+Títulos, capítulos e seções são descartados. Ementa e assinaturas são fragmentadas por parágrafos, assim como documentos que não são leis.
+
+---
+
 ## Testes
 
 ```bash
@@ -174,4 +188,4 @@ cd backend
 pytest tests/ -v
 ```
 
-A suíte cobre fragmentação de texto, leitura de arquivos, integridade (hash anti-duplicação), serviço de recuperação/geração e rotas da API, usando mocks para o banco e os serviços externos.
+A suíte cobre fragmentação de texto (incluindo redação vigente e divisão por artigo das leis), leitura de arquivos, integridade (hash anti-duplicação), serviço de recuperação/geração e rotas da API, usando mocks para o banco e os serviços externos.

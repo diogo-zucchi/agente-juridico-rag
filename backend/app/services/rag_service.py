@@ -8,7 +8,8 @@ from app.core.config import get_settings
 from app.models.models import (
     Consulta, Resposta, RespostaDocumento, Avaliacao
 )
-from app.services.ingestao_service import buscar_chunks
+from app.services.ingestao_service import buscar_chunks, texto_do_artigo
+from app.services.texto_legal import rotulo_do_artigo
 
 PROMPT_JURIDICO = """Você é um assistente jurídico especializado no direito brasileiro.
 Utilize EXCLUSIVAMENTE os trechos de documentos jurídicos fornecidos abaixo.
@@ -106,20 +107,39 @@ def _recuperar_chunks(
     Retorna os chunks mais relevantes já enriquecidos com título/fonte.
     Se id_documento for informado, a busca é restrita àquele documento
     (filtro aplicado no próprio banco, junto da busca vetorial).
+
+    Chunks de lei são buscados pequenos (embedding mais preciso), mas o LLM
+    recebe o artigo inteiro: assim, achar o § 5º do Art. 16 traz também os
+    incisos do caput. Artigos repetidos contam uma vez só (com o maior score).
     """
-    resultados = buscar_chunks(db, pergunta, top_k=k, id_documento=id_documento)
+    max_chars = get_settings().artigo_max_chars
+    # busca mais candidatos, porque vários podem ser do mesmo artigo
+    resultados = buscar_chunks(db, pergunta, top_k=k * 3, id_documento=id_documento)
 
     chunks_com_score = []
+    vistos = set()
     for chunk, score in resultados:
+        texto, chave = chunk.texto_chunk, ("chunk", chunk.id)
+        rotulo = rotulo_do_artigo(chunk.texto_chunk)
+        if rotulo:
+            artigo = texto_do_artigo(db, chunk.id_documento, rotulo)
+            if artigo and len(artigo) <= max_chars:
+                texto, chave = artigo, ("artigo", chunk.id_documento, rotulo)
+        if chave in vistos:
+            continue
+        vistos.add(chave)
+
         doc = chunk.documento
         fonte = doc.fonte.nome if doc and doc.fonte else "Fonte desconhecida"
         chunks_com_score.append({
             "chunk_id": chunk.id,
             "titulo": doc.titulo if doc else "Documento",
             "fonte": fonte,
-            "texto_chunk": chunk.texto_chunk,
+            "texto_chunk": texto,
             "score": score,
         })
+        if len(chunks_com_score) == k:
+            break
     return chunks_com_score
 
 

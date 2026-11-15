@@ -1,0 +1,8 @@
+.git
+.venv
+.env
+**/__pycache__
+**/.pytest_cache
+**/logs
+data
+leis-e-perguntas-avaliacao

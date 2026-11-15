@@ -3,7 +3,7 @@ Serviço de Ingestão de Documentos Jurídicos.
 
 Responsável por:
   1. Ler arquivos (PDF, TXT, HTML)
-  2. Dividir em chunks
+  2. Dividir em chunks (em leis: só a redação vigente, por artigo)
   3. Gerar embeddings
   4. Salvar texto e vetores no PostgreSQL (pgvector)
 """
@@ -19,6 +19,9 @@ from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.models.models import Chunk, Documento, Fonte
+from app.services.texto_legal import (
+    dividir_artigo, eh_texto_legal, extrair_artigos, juntar_artigo, rotulo_do_artigo,
+)
 
 settings = get_settings()
 
@@ -107,6 +110,21 @@ def ler_arquivo(caminho: str) -> str:
 # ─────────────────────────────────────────────
 
 def _dividir_em_chunks(texto: str) -> List[str]:
+    """
+    Textos legais (com 'Art. N') são limpos das redações revogadas e
+    divididos por artigo; os demais, por parágrafos.
+    """
+    if not eh_texto_legal(texto):
+        return _dividir_por_paragrafos(texto)
+
+    artigos, texto_fora = extrair_artigos(texto)
+    chunks = _dividir_por_paragrafos(texto_fora) if texto_fora else []
+    for linhas in artigos:
+        chunks.extend(dividir_artigo(linhas, settings.chunk_size, settings.chunk_overlap))
+    return chunks
+
+
+def _dividir_por_paragrafos(texto: str) -> List[str]:
     """
     Divide o texto em chunks com sobreposição.
     Tenta respeitar parágrafos antes de cortar por caracteres.
@@ -239,3 +257,19 @@ def buscar_chunks(
         logger.warning("Nenhum chunk indexado encontrado. Indexe documentos primeiro.")
 
     return [(chunk, -float(dist)) for chunk, dist in resultados]
+
+
+def texto_do_artigo(db: Session, id_documento: int, rotulo: str) -> str:
+    """
+    Remonta o artigo inteiro a partir dos chunks do documento que começam
+    com o rótulo (todo chunk de um artigo começa com ele).
+    """
+    stmt = (
+        select(Chunk.texto_chunk)
+        .where(Chunk.id_documento == id_documento)
+        .where(Chunk.texto_chunk.startswith(rotulo, autoescape=True))
+        .order_by(Chunk.indice_chunk)
+    )
+    # startswith("Art. 1") também pega "Art. 10": confere o rótulo exato
+    textos = [t for t in db.scalars(stmt).all() if rotulo_do_artigo(t) == rotulo]
+    return juntar_artigo(textos)

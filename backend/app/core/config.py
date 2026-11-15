@@ -29,6 +29,8 @@ class Settings(BaseSettings):
     top_k_results: int = 5
     chunk_size: int = 512
     chunk_overlap: int = 50
+    # artigo de lei recuperado vai inteiro ao LLM se tiver até este tamanho
+    artigo_max_chars: int = 4000
 
     log_level: str = "INFO"
     log_file: str = "./logs/agente.log"
