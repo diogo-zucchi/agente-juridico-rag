@@ -6,7 +6,6 @@ ENV_FILE = Path(__file__).resolve().parent.parent.parent.parent / ".env"
 class Settings(BaseSettings):
     database_url: str = "postgresql+psycopg://postgres:senha@localhost:5432/agente_juridico"
 
-    # ── LLMs ──────────────────────────────────────────────
     maritaca_api_key: str = ""
     maritaca_model: str = "sabia-4"
 
@@ -19,7 +18,7 @@ class Settings(BaseSettings):
     openai_base_url: str = "https://api.openai.com/v1"
 
     embedding_model: str = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
-    # dimensão dos vetores do modelo acima; deve bater com vector(N) em chunks.embedding
+    # dimensão dos vetores do modelo acima, a mesma de vector(N) em chunks.embedding
     embedding_dim: int = 384
 
     api_host: str = "0.0.0.0"

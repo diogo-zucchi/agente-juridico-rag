@@ -10,16 +10,10 @@ from app.api.routes import router
 
 settings = get_settings()
 
-# ─────────────────────────────────────────────
-# Logger
-# ─────────────────────────────────────────────
 logger.remove()
 logger.add(sys.stdout, level=settings.log_level)
 logger.add(settings.log_file, rotation="10 MB", retention="30 days", level=settings.log_level)
 
-# ─────────────────────────────────────────────
-# Aplicação
-# ─────────────────────────────────────────────
 app = FastAPI(
     title="Agente Jurídico Inteligente (RAG)",
     description=(
@@ -33,7 +27,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],   # Em produção, liste os domínios permitidos
+    allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -41,9 +35,6 @@ app.add_middleware(
 app.include_router(router, prefix="/api/v1")
 
 
-# ─────────────────────────────────────────────
-# Eventos de inicialização
-# ─────────────────────────────────────────────
 @app.on_event("startup")
 async def startup():
     logger.info("Iniciando Agente Jurídico RAG...")
@@ -51,14 +42,12 @@ async def startup():
     if not ok:
         logger.error("Banco de dados indisponível. Verifique a configuração.")
     else:
-        # Cria tabelas que ainda não existem (não substitui o init_db.sql em prod)
         criar_tabelas()
         logger.info("Tabelas verificadas/criadas.")
 
 
 @app.get("/", tags=["Status"])
 def root():
-    # Serve o frontend (index.html) na raiz, para funcionar via túnel/deploy
     frontend = os.path.join(os.path.dirname(__file__), "..", "..", "frontend", "index.html")
     if os.path.exists(frontend):
         return FileResponse(frontend)

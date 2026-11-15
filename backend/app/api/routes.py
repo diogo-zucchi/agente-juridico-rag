@@ -12,12 +12,9 @@ from app.services import rag_service, ingestao_service
 router = APIRouter()
 
 
-# ─────────────────────────────────────────────
-# Schemas
-# ─────────────────────────────────────────────
 class PerguntaRequest(BaseModel):
     pergunta: str
-    provedor: Optional[str] = "maritaca"      # 'maritaca' ou 'deepseek'
+    provedor: Optional[str] = "maritaca"
     id_documento: Optional[int] = None
     top_k: Optional[int] = None
 
@@ -54,9 +51,6 @@ class DocumentoSchema(BaseModel):
         from_attributes = True
 
 
-# ─────────────────────────────────────────────
-# Consulta com uma LLM
-# ─────────────────────────────────────────────
 @router.post("/consultar", tags=["RAG"])
 def consultar(req: PerguntaRequest, db: Session = Depends(get_db)):
     if not req.pergunta.strip():
@@ -70,9 +64,6 @@ def consultar(req: PerguntaRequest, db: Session = Depends(get_db)):
     )
 
 
-# ─────────────────────────────────────────────
-# Comparação às cegas entre as duas LLMs
-# ─────────────────────────────────────────────
 @router.post("/comparar", tags=["Avaliação"])
 def comparar(req: CompararRequest, db: Session = Depends(get_db)):
     if not req.pergunta.strip():
@@ -85,9 +76,6 @@ def comparar(req: CompararRequest, db: Session = Depends(get_db)):
     )
 
 
-# ─────────────────────────────────────────────
-# Salvar avaliação (nota 1 a 5)
-# ─────────────────────────────────────────────
 @router.post("/avaliar", tags=["Avaliação"])
 def avaliar(req: AvaliacaoRequest, db: Session = Depends(get_db)):
     try:
@@ -102,9 +90,6 @@ def avaliar(req: AvaliacaoRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail=str(e))
 
 
-# ─────────────────────────────────────────────
-# Resultados consolidados (para a apresentação)
-# ─────────────────────────────────────────────
 @router.get("/resultados", tags=["Avaliação"])
 def resultados(db: Session = Depends(get_db)):
     return rag_service.listar_resultados(db=db)
@@ -131,9 +116,6 @@ def resultados_csv(db: Session = Depends(get_db)):
     )
 
 
-# ─────────────────────────────────────────────
-# Histórico / Ingestão / Listagens
-# ─────────────────────────────────────────────
 @router.get("/historico", tags=["RAG"])
 def historico(limite: int = 20, db: Session = Depends(get_db)):
     return rag_service.listar_historico(db=db, limite=limite)

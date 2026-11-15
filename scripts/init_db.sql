@@ -1,14 +1,6 @@
--- ============================================================
--- Inicialização do Banco de Dados - Agente Jurídico RAG
--- ============================================================
-
--- Habilita a extensão pgvector
 CREATE EXTENSION IF NOT EXISTS vector;
 
--- --------------------------------------------------------
--- Tabela: FONTES
 -- Origem dos documentos (tribunal, legislação, etc.)
--- --------------------------------------------------------
 CREATE TABLE IF NOT EXISTS fontes (
     id        SERIAL PRIMARY KEY,
     nome      VARCHAR(255) NOT NULL,
@@ -17,10 +9,6 @@ CREATE TABLE IF NOT EXISTS fontes (
     criado_em TIMESTAMP DEFAULT NOW()
 );
 
--- --------------------------------------------------------
--- Tabela: DOCUMENTOS
--- Documentos jurídicos indexados
--- --------------------------------------------------------
 CREATE TABLE IF NOT EXISTS documentos (
     id              SERIAL PRIMARY KEY,
     titulo          VARCHAR(500) NOT NULL,
@@ -33,75 +21,50 @@ CREATE TABLE IF NOT EXISTS documentos (
     criado_em       TIMESTAMP DEFAULT NOW()
 );
 
--- --------------------------------------------------------
--- Tabela: CHUNKS
--- Trechos dos documentos com seus embeddings vetoriais
--- --------------------------------------------------------
 CREATE TABLE IF NOT EXISTS chunks (
     id          SERIAL PRIMARY KEY,
     id_documento INTEGER REFERENCES documentos(id) ON DELETE CASCADE,
     texto_chunk  TEXT NOT NULL,
-    indice_chunk INTEGER NOT NULL,        -- posição do chunk no doc
-    embedding    vector(384),             -- dimensão do modelo MiniLM (384)
+    indice_chunk INTEGER NOT NULL,
+    embedding    vector(384),             -- dimensão do MiniLM (EMBEDDING_DIM)
     criado_em    TIMESTAMP DEFAULT NOW()
 );
 
--- Sem índice vetorial de propósito: com poucos milhares de chunks a busca
--- exata (varredura sequencial) é rápida e devolve os mesmos resultados do
--- antigo IndexFlatIP do FAISS. Um ivfflat criado com a tabela vazia tem
--- centroides ruins e, combinado com filtro por documento, pode devolver
--- menos de k resultados. Se o volume crescer, prefira HNSW:
---   CREATE INDEX chunks_embedding_idx ON chunks
---       USING hnsw (embedding vector_ip_ops);
+-- Sem índice vetorial: com poucos milhares de chunks a busca exata é rápida
+-- e determinística.
 
--- Filtro por documento (busca restrita a um documento)
 CREATE INDEX IF NOT EXISTS chunks_id_documento_idx ON chunks (id_documento);
 
--- --------------------------------------------------------
--- Tabela: CONSULTAS
--- Perguntas feitas pelos usuários
--- --------------------------------------------------------
 CREATE TABLE IF NOT EXISTS consultas (
     id         SERIAL PRIMARY KEY,
     pergunta   TEXT NOT NULL,
     data_hora  TIMESTAMP DEFAULT NOW(),
-    id_resposta INTEGER,  -- será preenchido após gerar resposta
+    id_resposta INTEGER,
     id_documento INTEGER REFERENCES documentos(id) ON DELETE SET NULL
 );
 
--- --------------------------------------------------------
--- Tabela: RESPOSTAS
--- Respostas geradas pelo LLM
--- --------------------------------------------------------
 CREATE TABLE IF NOT EXISTS respostas (
     id             SERIAL PRIMARY KEY,
     texto_resposta TEXT NOT NULL,
-    modelo_llm     VARCHAR(50),   -- 'maritaca' ou 'deepseek'
+    modelo_llm     VARCHAR(50),
     data_hora      TIMESTAMP DEFAULT NOW(),
     id_consulta    INTEGER REFERENCES consultas(id) ON DELETE CASCADE
 );
 
--- Atualiza FK de consultas -> respostas
+-- consultas e respostas se referenciam: esta FK só pode vir depois das duas tabelas
 ALTER TABLE consultas
     ADD CONSTRAINT fk_consulta_resposta
     FOREIGN KEY (id_resposta) REFERENCES respostas(id) ON DELETE SET NULL;
 
--- --------------------------------------------------------
--- Tabela: RESPOSTA_DOCUMENTO
--- Quais documentos/chunks embasaram cada resposta
--- --------------------------------------------------------
+-- Chunks que embasaram cada resposta
 CREATE TABLE IF NOT EXISTS resposta_documento (
     id          SERIAL PRIMARY KEY,
     id_resposta INTEGER REFERENCES respostas(id) ON DELETE CASCADE,
     id_chunk    INTEGER REFERENCES chunks(id) ON DELETE SET NULL,
-    score       FLOAT,   -- score de similaridade
+    score       FLOAT,
     criado_em   TIMESTAMP DEFAULT NOW()
 );
 
--- --------------------------------------------------------
--- Tabela: AVALIACOES
--- Nota (1 a 5) atribuída pelo avaliador a cada resposta
--- --------------------------------------------------------
 CREATE TABLE IF NOT EXISTS avaliacoes (
     id          SERIAL PRIMARY KEY,
     id_resposta INTEGER REFERENCES respostas(id) ON DELETE CASCADE,
@@ -111,9 +74,6 @@ CREATE TABLE IF NOT EXISTS avaliacoes (
     data_hora   TIMESTAMP DEFAULT NOW()
 );
 
--- --------------------------------------------------------
--- Dados iniciais de fontes jurídicas
--- --------------------------------------------------------
 INSERT INTO fontes (nome, tipo, url_base) VALUES
     ('Superior Tribunal de Justiça', 'STJ', 'https://www.stj.jus.br'),
     ('Supremo Tribunal Federal', 'STF', 'https://portal.stf.jus.br'),

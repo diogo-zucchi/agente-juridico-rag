@@ -1,15 +1,13 @@
 """
-Script de ingestão em lote — indexa todos os arquivos em data/raw/.
+Indexa em lote todos os arquivos de uma pasta.
 
 Uso:
-    python scripts/indexar_documentos.py
     python scripts/indexar_documentos.py --pasta ./data/raw --fonte-id 1
 """
 import argparse
 import sys
 import os
 
-# Adiciona o backend ao path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "backend"))
 
 from pathlib import Path

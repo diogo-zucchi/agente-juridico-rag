@@ -13,10 +13,6 @@ from unittest.mock import MagicMock, patch
 from app.services.ingestao_service import _dividir_em_chunks
 
 
-# ─────────────────────────────────────────────
-# Testes de Chunking
-# ─────────────────────────────────────────────
-
 class TestChunking:
     def test_texto_curto_retorna_um_chunk(self):
         texto = "Este é um texto curto para teste."
@@ -25,7 +21,6 @@ class TestChunking:
         assert chunks[0] == texto
 
     def test_texto_longo_gera_multiplos_chunks(self):
-        # Gera texto maior que CHUNK_SIZE (512 chars)
         paragrafo = "Dispositivo legal aplicável ao caso. " * 20
         texto = "\n\n".join([paragrafo] * 5)
         chunks = _dividir_em_chunks(texto)
@@ -65,10 +60,6 @@ class TestChunking:
         assert chunks[0] == curto_a
         assert chunks[-1] == curto_c
 
-
-# ─────────────────────────────────────────────
-# Testes de Texto Legal (redação vigente e chunking por artigo)
-# ─────────────────────────────────────────────
 
 # Formato do texto compilado do Planalto: todas as redações em ordem cronológica
 LEI_EXEMPLO = """LEI Nº 1, DE 1 DE JANEIRO DE 2000
@@ -235,10 +226,6 @@ class TestTextoLegal:
         assert not any("Art. 15" in c and "Art. 16." in c for c in chunks)
 
 
-# ─────────────────────────────────────────────
-# Testes de Leitura de Arquivo
-# ─────────────────────────────────────────────
-
 class TestLeituraArquivo:
     def test_ler_txt(self, tmp_path):
         from app.services.ingestao_service import ler_arquivo
@@ -266,10 +253,6 @@ class TestLeituraArquivo:
         assert "Texto da decisão" in texto
 
 
-# ─────────────────────────────────────────────
-# Testes de Integração (com mock do banco)
-# ─────────────────────────────────────────────
-
 class TestBuscaVetorial:
     def _buscar(self, id_documento=None):
         import numpy as np
@@ -295,7 +278,7 @@ class TestBuscaVetorial:
         assert "<#>" in sql
         assert "LIMIT" in sql
         assert "chunks.id_documento =" not in sql
-        # score volta positivo, como no antigo IndexFlatIP
+        # o score volta positivo
         assert resultado == [(chunk_mock, pytest.approx(0.82))]
 
     def test_filtra_por_documento_no_banco(self):
@@ -367,7 +350,6 @@ class TestRagService:
         from app.services.ingestao_service import buscar_chunks
 
         db_mock = MagicMock()
-        # Consulta salva com flush
         consulta_mock = MagicMock()
         consulta_mock.id = 1
         resposta_mock  = MagicMock()
@@ -410,10 +392,6 @@ class TestRagService:
         assert "data_hora" in historico[0]
 
 
-# ─────────────────────────────────────────────
-# Testes de Hash de Integridade
-# ─────────────────────────────────────────────
-
 class TestHashIntegridade:
     def test_hash_consistente(self):
         import hashlib
@@ -428,10 +406,6 @@ class TestHashIntegridade:
         h2 = hashlib.sha256("Texto B".encode()).hexdigest()
         assert h1 != h2
 
-
-# ─────────────────────────────────────────────
-# Testes das Rotas da API (TestClient)
-# ─────────────────────────────────────────────
 
 class TestAPI:
     @pytest.fixture

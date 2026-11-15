@@ -4,12 +4,10 @@ FROM python:3.13-slim
 
 WORKDIR /app/backend
 
-# Dependências do sistema
 RUN apt-get update && apt-get install -y \
     gcc g++ libpq-dev curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Dependências Python
 # torch só para CPU: evita baixar as bibliotecas CUDA (vários GB)
 RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu
 COPY requirements.txt /tmp/requirements.txt
@@ -19,7 +17,6 @@ RUN pip install --no-cache-dir -r /tmp/requirements.txt
 COPY backend /app/backend
 COPY frontend /app/frontend
 
-# Diretórios necessários
 RUN mkdir -p /app/backend/logs
 
 EXPOSE 8000

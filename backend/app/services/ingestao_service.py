@@ -1,12 +1,4 @@
-"""
-Serviço de Ingestão de Documentos Jurídicos.
-
-Responsável por:
-  1. Ler arquivos (PDF, TXT, HTML)
-  2. Dividir em chunks (em leis: só a redação vigente, por artigo)
-  3. Gerar embeddings
-  4. Salvar texto e vetores no PostgreSQL (pgvector)
-"""
+"""Ingestão: lê o arquivo, divide em chunks, gera embeddings e grava no pgvector."""
 import hashlib
 import os
 from pathlib import Path
@@ -25,10 +17,6 @@ from app.services.texto_legal import (
 
 settings = get_settings()
 
-
-# ─────────────────────────────────────────────
-# Modelo de embeddings (carregado uma vez)
-# ─────────────────────────────────────────────
 _embedding_model: SentenceTransformer | None = None
 
 
@@ -55,15 +43,11 @@ def gerar_embeddings(textos: List[str], show_progress_bar: bool = False):
     )
 
 
-# ─────────────────────────────────────────────
-# Leitura de arquivos
-# ─────────────────────────────────────────────
-
 def _ler_pdf(caminho: str) -> str:
     texto = ""
 
     try:
-        import fitz  # PyMuPDF
+        import fitz
         with fitz.open(caminho) as doc:
             texto = "\n".join(page.get_text() for page in doc)
     except Exception as e:
@@ -105,10 +89,6 @@ def ler_arquivo(caminho: str) -> str:
         raise ValueError(f"Formato não suportado: {ext}")
 
 
-# ─────────────────────────────────────────────
-# Chunking
-# ─────────────────────────────────────────────
-
 def _dividir_em_chunks(texto: str) -> List[str]:
     """
     Textos legais (com 'Art. N') são limpos das redações revogadas e
@@ -125,10 +105,7 @@ def _dividir_em_chunks(texto: str) -> List[str]:
 
 
 def _dividir_por_paragrafos(texto: str) -> List[str]:
-    """
-    Divide o texto em chunks com sobreposição.
-    Tenta respeitar parágrafos antes de cortar por caracteres.
-    """
+    """Junta parágrafos até o tamanho do chunk; parágrafo maior que isso é cortado com sobreposição."""
     tamanho  = settings.chunk_size
     overlap  = settings.chunk_overlap
     paragrafos = [p.strip() for p in texto.split("\n\n") if p.strip()]
@@ -142,12 +119,10 @@ def _dividir_por_paragrafos(texto: str) -> List[str]:
         else:
             if buffer:
                 chunks.append(buffer)
-            # Parágrafo maior que o chunk? Divide por caractere.
             if len(paragrafo) > tamanho:
                 for i in range(0, len(paragrafo), tamanho - overlap):
                     chunks.append(paragrafo[i : i + tamanho])
-                # o buffer já foi emitido: zera para não duplicá-lo
-                # no próximo chunk
+                # o buffer já foi emitido: sem zerar, ele se repetiria no próximo chunk
                 buffer = ""
             else:
                 buffer = paragrafo
@@ -158,10 +133,6 @@ def _dividir_por_paragrafos(texto: str) -> List[str]:
     return chunks
 
 
-# ─────────────────────────────────────────────
-# Pipeline principal de ingestão
-# ─────────────────────────────────────────────
-
 def ingerir_documento(
     db: Session,
     caminho: str,
@@ -170,23 +141,19 @@ def ingerir_documento(
     nivel_dificuldade: str | None = None,
 ) -> Documento:
     """
-    Pipeline completo:
-      ler arquivo → calcular hash → chunks → embeddings → salvar no banco
     Texto e vetores são gravados na mesma transação: ou o documento
-    inteiro fica indexado, ou nada é gravado.
+    inteiro fica indexado, ou nada é gravado. Arquivo repetido (mesmo
+    hash) devolve o documento já existente.
     """
-    # 1. Leitura
     logger.info(f"Lendo arquivo: {caminho}")
     texto = ler_arquivo(caminho)
 
-    # 2. Hash para evitar duplicatas
     hash_doc = hashlib.sha256(texto.encode()).hexdigest()
     existente = db.query(Documento).filter_by(hash_integridade=hash_doc).first()
     if existente:
         logger.warning(f"Documento já indexado (hash={hash_doc[:8]}…). Ignorando.")
         return existente
 
-    # 3. Salvar documento no banco
     doc = Documento(
         titulo=titulo,
         texto=texto,
@@ -196,16 +163,13 @@ def ingerir_documento(
         arquivo_origem=os.path.basename(caminho),
     )
     db.add(doc)
-    db.flush()  # obtém doc.id antes do commit
+    db.flush()
 
-    # 4. Chunking
     lista_chunks = _dividir_em_chunks(texto)
     logger.info(f"Documento dividido em {len(lista_chunks)} chunks.")
 
-    # 5. Embeddings
     embeddings = gerar_embeddings(lista_chunks, show_progress_bar=True)
 
-    # 6. Salvar chunks e vetores no banco
     for idx, (chunk_texto, emb) in enumerate(zip(lista_chunks, embeddings)):
         db.add(Chunk(
             id_documento=doc.id,
@@ -220,10 +184,6 @@ def ingerir_documento(
     return doc
 
 
-# ─────────────────────────────────────────────
-# Busca semântica (usada pelo retriever)
-# ─────────────────────────────────────────────
-
 def buscar_chunks(
     db: Session,
     pergunta: str,
@@ -231,11 +191,9 @@ def buscar_chunks(
     id_documento: int | None = None,
 ) -> List[Tuple[Chunk, float]]:
     """
-    Retorna lista de (chunk, score) ordenada por similaridade.
-    Se id_documento for informado, a busca é restrita àquele documento.
-
-    Busca exata (sem índice aproximado): o score é o produto interno
-    entre embeddings normalizados, o mesmo do antigo IndexFlatIP do FAISS.
+    (chunk, score) por similaridade decrescente, opcionalmente restrita a um
+    documento. Busca exata: o score é o produto interno entre embeddings
+    normalizados, ou seja, o cosseno.
     """
     k = top_k or settings.top_k_results
     vetor_pergunta = gerar_embeddings([pergunta])[0]

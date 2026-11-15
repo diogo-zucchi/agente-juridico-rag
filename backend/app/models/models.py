@@ -1,7 +1,4 @@
-"""
-Modelos ORM — espelham as tabelas do init_db.sql.
-"""
-from datetime import datetime, date
+"""Modelos ORM: espelham as tabelas do init_db.sql."""
 from sqlalchemy import (
     Column, Integer, String, Text, Date, Float,
     DateTime, ForeignKey, func
@@ -49,7 +46,6 @@ class Chunk(Base):
     id_documento = Column(Integer, ForeignKey("documentos.id", ondelete="CASCADE"))
     texto_chunk  = Column(Text, nullable=False)
     indice_chunk = Column(Integer, nullable=False)
-    # vetor normalizado do texto_chunk (pgvector)
     embedding    = Column(Vector(get_settings().embedding_dim))
     criado_em    = Column(DateTime, default=func.now())
 
@@ -64,7 +60,7 @@ class Consulta(Base):
     pergunta    = Column(Text, nullable=False)
     data_hora   = Column(DateTime, default=func.now())
     id_resposta = Column(Integer, ForeignKey("respostas.id"), nullable=True)
-    # documento usado no teste (quando a busca é restrita a 1 documento)
+    # preenchido quando a busca foi restrita a um documento
     id_documento = Column(Integer, ForeignKey("documentos.id", ondelete="SET NULL"), nullable=True)
 
     resposta = relationship("Resposta", back_populates="consulta",
@@ -77,7 +73,6 @@ class Resposta(Base):
 
     id             = Column(Integer, primary_key=True, index=True)
     texto_resposta = Column(Text, nullable=False)
-    # qual LLM gerou esta resposta: 'maritaca' ou 'deepseek'
     modelo_llm     = Column(String(50), nullable=True)
     data_hora      = Column(DateTime, default=func.now())
     id_consulta    = Column(Integer, ForeignKey("consultas.id", ondelete="CASCADE"))

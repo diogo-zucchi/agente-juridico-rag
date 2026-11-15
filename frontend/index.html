@@ -85,7 +85,6 @@
     .fonte-item strong { display: block; color: var(--azul); }
     .score { color: var(--verde); font-weight: 600; font-size: .78rem; }
 
-    /* Estrelas de avaliação */
     .stars { font-size: 1.7rem; cursor: pointer; user-select: none; letter-spacing: .15rem; }
     .stars .star { color: #cbd5e1; transition: color .1s; }
     .stars .star.on { color: var(--amarelo); }
@@ -304,7 +303,7 @@
     }catch(e){ console.error("Erro ao carregar documentos", e); }
   }
 
-  /* ───── Consulta com 1 LLM ───── */
+  /* ───── Consulta ───── */
   async function consultar(){
     const pergunta = document.getElementById("pergunta").value.trim();
     if(!pergunta){ alert("Digite uma pergunta."); return; }
@@ -344,7 +343,7 @@
     document.getElementById("resposta-box").classList.add("hidden");
   }
 
-  /* ───── Comparação às cegas (dinâmica: 2 ou mais LLMs) ───── */
+  /* ───── Comparação às cegas ───── */
   function setNota(idx, v){
     respostasAtuais[idx].nota = v;
     const el = document.getElementById("stars-" + idx);
@@ -422,7 +421,7 @@
         await enviarAvaliacao(r.resposta_id, r.nota, coment, avaliador);
       }
       document.getElementById("save-status").innerHTML='<span class="ok">✅ Avaliações salvas!</span>';
-      // Revela qual LLM era cada uma (só após salvar, para não enviesar)
+      // o modelo só é revelado depois de salvar, para não enviesar a nota
       const rev = document.getElementById("revelacao");
       rev.innerHTML = "Identificação (revelada após salvar): " +
         respostasAtuais.map(r => `<b>Resposta ${r.rotulo} = ${r.modelo_llm}</b>`).join(" · ");
@@ -448,7 +447,6 @@
       const d = await r.json();
       if(!d.linhas.length){ el.innerHTML='<p class="hint">Ainda não há avaliações salvas.</p>'; return; }
 
-      // Gráfico: nota média por LLM x dificuldade
       let chart = '<h2 style="margin-bottom:.6rem">Nota média por LLM e dificuldade</h2>';
       const cores = { maritaca:"#2563eb", deepseek:"#16a34a", openai:"#ea580c" };
       d.resumo_por_llm_dificuldade.forEach(row=>{
@@ -458,14 +456,12 @@
           <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${cor}">${row.nota_media}</div></div></div>`;
       });
 
-      // Resumo geral por LLM
       let resumo = '<h2 style="margin:1rem 0 .6rem">Média geral por LLM</h2><table><tr><th>LLM</th><th>Nota média</th><th>Avaliações</th></tr>';
       d.resumo_por_llm.forEach(row=>{
         resumo += `<tr><td>${row.modelo_llm}</td><td><b>${row.nota_media}</b></td><td>${row.n}</td></tr>`;
       });
       resumo += '</table>';
 
-      // Tabela detalhada
       let tabela = '<h2 style="margin:1rem 0 .6rem">Detalhe</h2><table><tr><th>Doc</th><th>Dif.</th><th>LLM</th><th>Nota</th><th>Avaliador</th></tr>';
       d.linhas.forEach(l=>{
         tabela += `<tr><td>${l.documento||"-"}</td><td>${l.nivel_dificuldade||"-"}</td>

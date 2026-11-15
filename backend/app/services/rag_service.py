@@ -24,18 +24,13 @@ Pergunta: {pergunta}
 
 Resposta fundamentada:"""
 
-# Provedores de LLM suportados
 PROVEDORES = ("maritaca", "deepseek", "openai")
 
-# Cache de invocadores por provedor (criados sob demanda)
 _llms: Dict[str, Callable[[str], str]] = {}
 
 
-# ─────────────────────────────────────────────
-# Fábrica de LLMs (Maritaca e DeepSeek)
-# Ambos usam a interface compatível com a OpenAI,
-# mudando apenas base_url, api_key e nome do modelo.
-# ─────────────────────────────────────────────
+# Os três provedores usam a API compatível com a OpenAI: muda só base_url,
+# chave e modelo.
 def _criar_llm(provedor: str) -> Callable[[str], str]:
     settings = get_settings()
 
@@ -93,10 +88,6 @@ def _montar_contexto(chunks_com_score: List[Dict]) -> str:
     return "\n\n---\n\n".join(partes)
 
 
-# ─────────────────────────────────────────────
-# Recuperação de chunks (com opção de restringir
-# a busca a um único documento)
-# ─────────────────────────────────────────────
 def _recuperar_chunks(
     db: Session,
     pergunta: str,
@@ -182,9 +173,6 @@ def _salvar_resposta(
     return resposta
 
 
-# ─────────────────────────────────────────────
-# Consulta com UMA LLM (uso normal)
-# ─────────────────────────────────────────────
 def responder_pergunta(
     db: Session,
     pergunta: str,
@@ -218,25 +206,22 @@ def responder_pergunta(
     }
 
 
-# ─────────────────────────────────────────────
-# Modo COMPARAÇÃO ÀS CEGAS
-# Recupera o contexto UMA vez e gera com as duas LLMs
-# sobre exatamente o mesmo contexto. As respostas são
-# embaralhadas e rotuladas como A/B (sem revelar a LLM).
-# ─────────────────────────────────────────────
 def comparar_llms(
     db: Session,
     pergunta: str,
     id_documento: int | None = None,
     top_k: int | None = None,
 ) -> Dict[str, Any]:
+    """
+    Comparação às cegas: todos os provedores respondem sobre o mesmo
+    contexto, recuperado uma vez só, e as respostas voltam embaralhadas
+    e rotuladas A, B, C.
+    """
     settings = get_settings()
     k = top_k or settings.top_k_results
 
-    # 1. Contexto único e idêntico para ambas as LLMs
     fontes = _recuperar_chunks(db, pergunta, k, id_documento)
 
-    # 2. Uma consulta, duas respostas
     consulta = Consulta(pergunta=pergunta, id_documento=id_documento)
     db.add(consulta)
     db.flush()
@@ -251,7 +236,6 @@ def comparar_llms(
     consulta.id_resposta = respostas_salvas[0].id
     db.commit()
 
-    # 3. Embaralhar e rotular A/B (avaliação às cegas)
     blocos = [
         {"resposta_id": r.id, "texto": r.texto_resposta, "modelo_llm": r.modelo_llm}
         for r in respostas_salvas
@@ -264,8 +248,7 @@ def comparar_llms(
             "rotulo": rotulo,
             "resposta_id": bloco["resposta_id"],
             "texto": bloco["texto"],
-            # modelo_llm é devolvido só para conferência/debug;
-            # o frontend NÃO o exibe ao avaliador.
+            # o frontend só revela o modelo depois que a nota é salva
             "modelo_llm": bloco["modelo_llm"],
         })
 
@@ -278,9 +261,6 @@ def comparar_llms(
     }
 
 
-# ─────────────────────────────────────────────
-# Avaliação (nota 1 a 5)
-# ─────────────────────────────────────────────
 def salvar_avaliacao(
     db: Session,
     id_resposta: int,
@@ -306,9 +286,7 @@ def salvar_avaliacao(
     logger.info(f"Avaliação salva (resposta_id={id_resposta}, nota={nota}).")
     return {"avaliacao_id": avaliacao.id, "id_resposta": id_resposta, "nota": nota}
 
-# ─────────────────────────────────────────────
-# Resultados consolidados (para a apresentação)
-# ─────────────────────────────────────────────
+
 def listar_resultados(db: Session) -> Dict[str, Any]:
     """
     Devolve:
@@ -338,7 +316,6 @@ def listar_resultados(db: Session) -> Dict[str, Any]:
             "data_hora": a.data_hora.isoformat() if a.data_hora else None,
         })
 
-    # agregações
     def _media(valores):
         return round(sum(valores) / len(valores), 2) if valores else None
 
